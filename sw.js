@@ -1,5 +1,5 @@
 
-const CACHE_VERSION = 'v1.0.1-' + new Date().getTime(); // 起動毎に確実に更新（またはデプロイ毎にここを手動更新）
+const CACHE_VERSION = 'v1.0.2-' + new Date().getTime(); // 起動毎に確実に更新（またはデプロイ毎にここを手動更新）
 const CACHE_NAME = `tabetotto-cache-${CACHE_VERSION}`;
 
 // キャッシュ対象の静的アセット
