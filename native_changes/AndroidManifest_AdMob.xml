@@ -1,0 +1,4 @@
+<!-- android/app/src/main/AndroidManifest.xml -->
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-3081007845343649~1937834329" />

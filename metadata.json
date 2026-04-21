@@ -1,0 +1,10 @@
+{
+  "name": "たべとっと。 WEB",
+  "description": "姿勢と食事をAIが解析。理想の体型作りをサポート。あなたの健康をゆるく見守るダイエットアシスタント。Web版は端末内にのみデータを保存します。",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "D7": [],
+  "Yp": [],
+  "majorCapabilities": []
+}

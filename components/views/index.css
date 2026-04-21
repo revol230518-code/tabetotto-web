@@ -1,0 +1,373 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 端末の文字サイズ設定を尊重するため、固定サイズ指定を削除 */
+/* html {
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+} */
+
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+
+  --app-bg: #FDFBF7;
+  --card-bg: #FFFDF9;
+  --border: #E9E1D6;
+  --soft-neutral: #F6F1E8;
+
+  --text-primary: #5D5745;
+  --text-muted: #7A7566;
+  --text-light: #9A9486;
+  --text-on-accent: #FFFFFF;
+
+  --meal-primary: #E97B8D;
+  --meal-soft: #FDECEF;
+  --meal-border: #F5BCC5;
+  --meal-pressed: #D96E82;
+
+  --read-primary: #6F9DCC;
+  --read-soft: #EDF5FC;
+  --read-border: #C9DDF0;
+  --read-pressed: #648EB8;
+
+  --posture-primary: #62B88E;
+  --posture-soft: #EAF7F0;
+  --posture-border: #BFE5D1;
+  --posture-pressed: #57A97F;
+
+  --success: #73B97C;
+  --warning: #E3A547;
+  --danger: #B85A5A;
+  --danger-soft: #FDECEC;
+  --info: #6F9DCC;
+}
+
+[data-theme="matte-blue"] {
+  --app-bg: #f4f7f9;
+  --card-bg: #ebf1f7;
+  --border: #cbd5e0;
+  --soft-neutral: #e2e8f0;
+
+  --text-primary: #1a202c;
+  --text-muted: #4a5568;
+  --text-light: #718096;
+  --text-on-accent: #FFFFFF;
+
+  --meal-primary: #2d5a82;
+  --meal-soft: #e1edf7;
+  --meal-border: #a0aec0;
+  --meal-pressed: #1f3f5b;
+
+  --read-primary: #5a7f7f;
+  --read-soft: #ecf5f5;
+  --read-border: #cbd5e0;
+  --read-pressed: #456161;
+
+  --posture-primary: #62B88E;
+  --posture-soft: #EAF7F0;
+  --posture-border: #BFE5D1;
+  --posture-pressed: #57A97F;
+
+  --success: #73B97C;
+  --warning: #E3A547;
+  --danger: #b85a5a;
+  --danger-soft: #fdecec;
+  --info: #6F9DCC;
+}
+
+* {
+  font-family: "Zen Maru Gothic", sans-serif !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  background-color: var(--app-bg);
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.03) 1.2px, transparent 1.2px),
+    linear-gradient(to bottom, transparent, rgba(248, 141, 141, 0.02));
+  background-size:
+    24px 24px,
+    100% 100%;
+  color: var(--text-primary);
+  margin: 0;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.pt-safe {
+  padding-top: var(--safe-top);
+}
+.pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+
+.btn-paper {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 
+    0 4px 0 rgba(0, 0, 0, 0.04),
+    0 8px 16px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.03) !important;
+}
+
+.btn-paper:active {
+  transition: all 0.08s ease-out;
+  transform: translateY(1px) scale(0.97) !important;
+  box-shadow: 
+    0 2px 0 rgba(0, 0, 0, 0.02),
+    0 4px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.btn-3d {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 
+    0 4px 0 rgba(0, 0, 0, 0.04),
+    0 8px 16px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.03) !important;
+}
+
+.btn-3d:active {
+  transition: all 0.08s ease-out;
+  transform: translateY(1px) scale(0.97) !important;
+  box-shadow: 
+    0 2px 0 rgba(0, 0, 0, 0.02),
+    0 4px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+@media (max-width: 360px) {
+  .logo-subtitle {
+    display: none;
+  }
+}
+
+/* 通常: ふわふわ・ゆらゆら・左右前後ランダム風 */
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translate(3px, -8px) rotate(2deg) scale(1.02);
+  }
+  50% {
+    transform: translate(-2px, 4px) rotate(-1deg) scale(0.98);
+  }
+  75% {
+    transform: translate(-4px, -4px) rotate(1deg) scale(1.01);
+  }
+}
+.animate-float {
+  animation: float 6s infinite ease-in-out;
+}
+
+/* 元気なし: 沈んで小さく揺れる (subtle bounce) */
+@keyframes subtle-bounce {
+  0%,
+  100% {
+    transform: translate(0px, 4px) scale(0.98) rotate(0deg);
+  }
+  33% {
+    transform: translate(2px, 8px) scale(0.97) rotate(1deg);
+  }
+  66% {
+    transform: translate(-2px, 6px) scale(0.99) rotate(-1deg);
+  }
+}
+.animate-subtle-bounce {
+  animation: subtle-bounce 5s infinite ease-in-out;
+}
+
+/* 太り気味: わずかに揺れる (slight wobble) */
+@keyframes slight-wobble {
+  0%,
+  100% {
+    transform: translate(0px, 0px) rotate(-3deg) scale(1.02);
+  }
+  33% {
+    transform: translate(3px, -2px) rotate(2deg) scale(1.03);
+  }
+  66% {
+    transform: translate(-2px, 2px) rotate(-1deg) scale(1.01);
+  }
+}
+.animate-slight-wobble {
+  animation: slight-wobble 5s infinite ease-in-out;
+}
+
+/* tiny scale (お腹すいた) */
+@keyframes tiny-scale {
+  0%,
+  100% {
+    transform: translate(0px, 0px) scale(0.95) rotate(0deg);
+  }
+  33% {
+    transform: translate(2px, -3px) scale(1.02) rotate(1deg);
+  }
+  66% {
+    transform: translate(-2px, 2px) scale(0.98) rotate(-1deg);
+  }
+}
+.animate-tiny-scale {
+  animation: tiny-scale 5s infinite ease-in-out;
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate(10px, -15px) rotate(5deg);
+  }
+  66% {
+    transform: translate(-5px, -10px) rotate(-3deg);
+  }
+}
+.animate-float-slow {
+  animation: float-slow 8s infinite ease-in-out;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+.animate-sway {
+  animation: sway 3s infinite ease-in-out;
+  display: inline-block;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 3s infinite ease-in-out;
+}
+
+.organic-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
+}
+
+.organic-blob {
+  position: absolute;
+  filter: blur(40px);
+  z-index: -1;
+  opacity: 0.15;
+  border-radius: 50%;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 広告コンポーネント用スタイル */
+.ad-banner-belt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 0;
+  background-color: #8d7b68;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 120px;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+/* タップ時のアニメーション */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes jump {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+.animate-jump {
+  animation: jump 0.5s ease-in-out;
+}
+
+@keyframes spin-fast {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-fast {
+  animation: spin-fast 0.5s linear;
+}
