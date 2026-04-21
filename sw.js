@@ -1,9 +1,8 @@
 
-const CACHE_VERSION = 'tabetotto-v' + new Date().toISOString().split('T')[0].replace(/-/g, '');
+const CACHE_VERSION = 'v1.0.1-' + new Date().getTime(); // 起動毎に確実に更新（またはデプロイ毎にここを手動更新）
 const CACHE_NAME = `tabetotto-cache-${CACHE_VERSION}`;
 
 // キャッシュ対象の静的アセット
-// 開発環境と本番環境でパスが異なる可能性があるため注意
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -16,72 +15,81 @@ const STATIC_ASSETS = [
   '/icons/icon-512.png'
 ];
 
-// 初期インストール時に静的アセットをキャッシュ
+/**
+ * Service Worker:
+ * PWA 2回目起動時の白画面問題を解決するための構成
+ */
+
+// 初期インストール
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('SW: 静的アセットをキャッシュ中');
+      console.log('SW: プリキャッシュ開始');
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  // 新しいSWをすぐに有効化
   self.skipWaiting();
 });
 
-// 古いキャッシュを削除
+// キャッシュクリーンアップ
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((allCaches) => {
       return Promise.all(
-        cacheNames
+        allCaches
           .filter((name) => name.startsWith('tabetotto-cache-') && name !== CACHE_NAME)
-          .map((name) => {
-            console.log('SW: 古いキャッシュを削除中:', name);
-            return caches.delete(name);
-          })
+          .map((name) => caches.delete(name))
       );
     })
   );
   self.clients.claim();
 });
 
-// リクエストのフェッチ
+// リクエスト処理
 self.addEventListener('fetch', (event) => {
-  // POSTリクエストやAPIリクエスト (Gemini等) はキャッシュしない
-  if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
 
-  // AI解析リクエストなどはネットワーク優先
-  if (event.request.url.includes('/api/')) return;
+  // GET以外や外部API（Gemini）は無視
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/api/')) {
+    return;
+  }
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // キャッシュがあれば返す
-      if (response) return response;
-
-      // なければネットワークから取得
-      return fetch(event.request).then((networkResponse) => {
-        // 成功したレスポンスのみキャッシュに保存 (動的キャッシュ)
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
-        }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          // JSやCSSなどの静的ファイル、アイコン類をキャッシュに溜めていく
-          if (
-            event.request.url.match(/\.(js|css|png|jpg|jpeg|svg|woff2)$/) ||
-            event.request.url.includes('/assets/')
-          ) {
-            cache.put(event.request, responseToCache);
+  // Navigation (HTMLページ) リクエスト: Network-First
+  // index.html が古いキャッシュに固定されることによる白画面（アセットハッシュ不一致）を防ぐ
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // 成功したらキャッシュも更新
+          if (response.status === 200) {
+            const cacheCopy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
           }
-        });
+          return response;
+        })
+        .catch(() => {
+          // オフライン時はキャッシュから返す
+          return caches.match(event.request) || caches.match('/index.html');
+        })
+    );
+    return;
+  }
 
+  // それ以外のリクエスト (JS/CSS/画像): Cache-First
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
+
+      return fetch(event.request).then((networkResponse) => {
+        // 正常なレスポンスのみキャッシュ（不完全なデータやエラーをキャッシュしない）
+        if (networkResponse && networkResponse.status === 200) {
+          const cacheCopy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+        }
         return networkResponse;
       }).catch(() => {
-        // オフライン時のフォールバック (ナビゲーションリクエストの場合のみ index.html を返す)
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
+        // 全くネットワークが繋がらず、キャッシュにもない場合
+        // 何も返さない（ブラウザにエラーを任せる）
       });
     })
   );
