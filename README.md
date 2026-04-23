@@ -47,6 +47,14 @@ npm run preview
 本Web移行対応後も、既存のAndroidプロジェクト（Capacitor）を壊しません。
 `isNativePlatform()` により、Android環境では引き続き AdMob 広告とネイティブ機能が優先されます。
 
----
-**たべとっと。 Project**
-"きろくして、たべて、わらう。やさしいダイエットをあなたに。"
+## 6. デプロイ手順 (Firebase)
+```bash
+# Firebaseログイン (初回のみ)
+firebase login
+
+# プレビューデプロイ
+firebase hosting:channel:deploy
+
+# 本番デプロイ
+firebase deploy --only hosting
+```

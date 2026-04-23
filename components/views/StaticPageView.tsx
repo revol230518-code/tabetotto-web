@@ -3,126 +3,249 @@ import React from 'react';
 import { ChevronLeft, Info, Shield, HelpCircle, AlertTriangle, BookOpen } from 'lucide-react';
 import { AppView } from '../../types';
 import { motion } from 'motion/react';
+import { NativeAdCard } from '../AdComponents';
 
 interface StaticPageViewProps {
   view: AppView;
   onBack: () => void;
 }
 
+const AndroidApp案内 = () => (
+    <div className="bg-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-4 my-8">
+        <h4 className="font-black text-rose-500">Android端末をお使いの方へ</h4>
+        <p className="text-sm text-stone-600 leading-relaxed">
+            たべとっと。は、Android専用のアプリ版もご用意しております。お好みの環境でぜひご利用ください。
+        </p>
+        <a 
+            href="https://play.google.com/store/apps/details?id=com.revo.tabetotto&pcampaignid=web_share"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full py-3 bg-stone-800 text-white rounded-xl text-center text-sm font-bold active:scale-95 transition-all"
+        >
+            Android版アプリを見る
+        </a>
+    </div>
+);
+
 const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
   const renderContent = () => {
     switch (view) {
       case AppView.USAGE:
         return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-black text-rose-500 flex items-center gap-2">
-              <BookOpen size={24} /> 使い方
-            </h2>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-4">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">1</div>
-                <div>
-                  <h3 className="font-bold">食事を記録する</h3>
-                  <p className="text-sm text-stone-500">食事の写真を撮るだけで、AIが栄養素やカロリーを推定します。</p>
-                </div>
+          <div className="space-y-8">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
+                <BookOpen size={28} /> たべとっと。の使い方完全ガイド
+              </h2>
+              <p className="text-sm text-stone-600 font-bold leading-relaxed">
+                「たべとっと。」は、食事・体重・姿勢をゆるく記録して見える化するためのアプリです。<br />
+                全部を完璧に記録することよりも、まずは「記録を付ける習慣を作る」ことを大切にしています。<br />
+                記録が雑でも、続くことで見えてくるものがあります。そのための習慣ツールとしてお使いください。
+              </p>
+            </header>
+
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-4">
+              <h3 className="font-black text-rose-500 border-b pb-2">最初にしておきたいこと</h3>
+              <p className="text-sm text-stone-600 leading-relaxed">
+                年齢、身長、目標体重、性別、活動量などの基本設定を入れておくと、より見やすいアドバイスが表示されます。<br />
+                ただ数字を並べるのではなく、「今の自分をざっくり振り返る」ためにこれらの情報を活用します。
+              </p>
+            </section>
+
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
+              <h3 className="font-black text-stone-700 border-b pb-2">機能と使い方のコツ</h3>
+              <div className="space-y-4 text-sm text-stone-600">
+                <p><strong>ごはん記録の使い方</strong></p>
+                <p className="pl-2">写真を撮る、選ぶ、または手入力でその日の食事を残せます。記録を付ける習慣を作ることが最優先です。朝だけ、昼だけ、外食だけでも十分です。</p>
+                
+                <p><strong>ホーム画面の見方</strong></p>
+                <p className="pl-2">体重・目標との差・BMI・総摂取kcalなどが見られます。全部を厳密に見る必要はありません。「今日は多めだったかな？」といった感覚を、やわらかく確認しましょう。</p>
+                
+                <p><strong>記録・グラフの見方</strong></p>
+                <p className="pl-2">1日単位の変動に振り回されず、少し長めの流れを見ることが大切です。週単位の変化で、リズムを掴むことをおすすめします。</p>
+
+                <p><strong>姿勢チェック</strong></p>
+                <p className="pl-2">正面・側面から姿勢傾向をチェックする補助機能です。結果はあくまで参考としてご活用ください。</p>
               </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">2</div>
-                <div>
-                  <h3 className="font-bold">姿勢をチェックする</h3>
-                  <p className="text-sm text-stone-500">正面と横からの姿勢をAIが解析し、理想の体型作りをサポートします。</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">3</div>
-                <div>
-                  <h3 className="font-bold">振り返る</h3>
-                  <p className="text-sm text-stone-500">カレンダーやグラフで日々の変化を確認しましょう。</p>
-                </div>
-              </div>
-            </div>
-            <p className="text-[10px] text-stone-400 text-center">※本アプリの解析結果は目安です。健康上の判断は専門家にご相談ください。</p>
+            </section>
+
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-4">
+              <h3 className="font-black text-rose-500 border-b pb-2">WEB版を知っておきたいこと</h3>
+              <p className="text-sm text-stone-600 leading-relaxed">
+                WEB版の記録は<strong>ブラウザ内</strong>に保存されます。端末やブラウザを変更・キャッシュ削除すると記録が消える場合があります。<br />
+                大切な記録は「画像を保存」機能を使って、端末のフォトライブラリにもバックアップを残してください。
+              </p>
+            </section>
+
+            <section className="text-center">
+               <p className="text-sm font-bold text-stone-500">
+                「朝だけ、昼だけ、外食だけでも大丈夫です。まずは記録を付ける習慣を作ることが最優先です。」
+               </p>
+            </section>
+
+            <NativeAdCard />
           </div>
         );
       case AppView.FAQ:
         return (
           <div className="space-y-6">
-            <h2 className="text-xl font-black text-rose-500 flex items-center gap-2">
-              <HelpCircle size={24} /> よくある質問
+            <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
+              <HelpCircle size={28} /> よくある質問
             </h2>
             <div className="space-y-4">
               {[
-                { q: "料金はかかりますか？", a: "基本無料でご利用いただけます。Web版では広告が表示される場合があります。" },
-                { q: "データはどこに保存されますか？", a: "入力されたデータや写真は、お使いのブラウザ（端末内）にのみ保存されます。サーバーへは保存されません。" },
-                { q: "機種変更でデータは引き継げますか？", a: "現在のWeb版ではクラウド同期機能がないため、機種変更やブラウザのデータ削除を行うとデータは失われます。ご注意ください。" },
-                { q: "AI解析がうまくいきません", a: "明るい場所で、対象がはっきりと写るように撮影してください。" }
+                { 
+                  q: "料金はかかりますか？", 
+                  a: "本アプリは基本無料でお使いいただけます。Web版では運営継続のために一部広告を表示させていただいております。AI解析には一定のサーバーコストがかかりますが、皆様に気軽に使っていただけるよう無料での提供を続けています。" 
+                },
+                { 
+                  q: "写真はどこに保存されますか？", 
+                  a: "あなたが撮影した写真や記録データは、すべて「今お使いのブラウザ（端末内）」にのみ保存されます。運営側（クラウド）へ写真が保存されたり公開されたりすることはありません。" 
+                },
+                { 
+                  q: "アプリを消すとデータはどうなりますか？", 
+                  a: "Web版の場合、ブラウザのキャッシュ（履歴）削除やデータの初期化を行うと、これまでの記録も失われます。大切な写真は「画像を保存」機能を使って、端末のフォトライブラリに残しておくことをおすすめします。" 
+                },
+                { 
+                  q: "AI解析の精度について知りたい", 
+                  a: "最新のAIモデルを使用しており高い精度を誇りますが、あくまで「写真から見た推定値」です。お皿の深さや隠れた具材までは正確に測れないため、目安としてご活用ください。" 
+                },
+                { 
+                  q: "Android版との違いはありますか？", 
+                  a: "基本的な機能は共通ですが、Web版はインストール不要で手軽に始められるのが特徴です。バックアップ機能に制限があるため、ホーム画面への追加を行ってご利用ください。" 
+                },
+                { 
+                  q: "Android版アプリはありますか？", 
+                  a: "はい、ございます。Android端末向けには、カメラ機能や通知機能を最適化したアプリ版も提供しております。" 
+                }
               ].map((item, i) => (
-                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
-                  <h3 className="font-bold text-rose-400 mb-1">Q. {item.q}</h3>
-                  <p className="text-sm text-stone-500">A. {item.a}</p>
+                <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100">
+                  <h3 className="font-black text-rose-500 mb-2 text-base">Q. {item.q}</h3>
+                  <p className="text-sm text-stone-600 leading-relaxed">A. {item.a}</p>
                 </div>
               ))}
+              <NativeAdCard />
+              <AndroidApp案内 />
             </div>
           </div>
         );
       case AppView.PRIVACY:
         return (
           <div className="space-y-6">
-            <h2 className="text-xl font-black text-rose-500 flex items-center gap-2">
-              <Shield size={24} /> プライバシーポリシー
+            <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
+              <Shield size={28} /> プライバシーポリシー
             </h2>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 prose prose-sm text-stone-600">
-              <h3 className="font-black text-stone-800">データの取り扱いについて</h3>
-              <p>本アプリは、ユーザーが撮影した写真や入力した健康データを端末内のLocalStorageにのみ保存します。当社がこれらのデータを収集・蓄積することはありません。</p>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-6 text-stone-600">
+              <section className="space-y-3 px-1">
+                <h3 className="font-black text-stone-800 text-lg border-l-4 border-rose-400 pl-3">データの取り扱いについて</h3>
+                <p className="text-sm leading-relaxed">
+                  本アプリ「たべとっと。」は、ユーザーのプライバシーを最優先に考えています。撮影された写真や入力された健康数値（体重等）は、すべてお使いの端末（Local Storage / IndexedDB）に保存されます。当運営者がこれらのデータをサーバーで収集したり、第三者に提供したりすることはありません。
+                </p>
+              </section>
               
-              <h3 className="font-black text-stone-800">AI解析について</h3>
-              <p>写真データの解析にはGoogleのGemini APIを使用します。解析のために一時的に送信されますが、データが学習目的で使用されることはありません。</p>
+              <section className="space-y-3 px-1">
+                <h3 className="font-black text-stone-800 text-lg border-l-4 border-rose-400 pl-3">AI解析の利用範囲</h3>
+                <p className="text-sm leading-relaxed">
+                  食事や姿勢の解析にはGoogle Gemini APIを利用しています。解析のために画像データが一時的に送信されますが、これは解析処理のためだけに使用され、AIの学習データとして蓄積・再利用されることはない旨をGoogle社が明言しています。
+                </p>
+              </section>
 
-              <h3 className="font-black text-stone-800">広告について</h3>
-              <p>本アプリでは、持続的な運営のためにGoogle AdSenseを使用しています。Cookie等を用いて、ユーザーの興味に基づいた広告を表示する場合があります。</p>
+              <section className="space-y-3 px-1">
+                <h3 className="font-black text-stone-800 text-lg border-l-4 border-rose-400 pl-3">広告および解析ツールの使用</h3>
+                <p className="text-sm leading-relaxed">
+                  本サイトでは、将来的なサービス改善と運営継続のため、Google AdSenseおよびGoogle Analyticsを使用する場合があります。これらはCookieを使用して、過去のアクセス情報に基づいた広告配信やトラフィック分析を行いますが、個人を特定するものではありません。
+                </p>
+              </section>
+
+              <section className="space-y-3 opacity-60 text-center py-4">
+                <p className="text-[10px]">制定日：2024年4月1日<br/>最終更新日：2024年4月22日<br/>運営：R.evo</p>
+              </section>
+
+              <NativeAdCard />
             </div>
           </div>
         );
       case AppView.TERMS:
         return (
           <div className="space-y-6">
-            <h2 className="text-xl font-black text-rose-500 flex items-center gap-2">
-              <AlertTriangle size={24} /> 注意事項
+            <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
+              <AlertTriangle size={28} /> ご利用上の注意
             </h2>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-amber-100 space-y-4">
-              <div className="bg-amber-50 rounded-xl p-4 flex gap-3">
-                <AlertTriangle size={20} className="text-amber-500 shrink-0" />
-                <p className="text-xs text-amber-700 font-bold">ブラウザの「キャッシュ削除」や「シークレットモード」での利用は、データが消去される原因となりますのでご注意ください。</p>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-6">
+              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex gap-3">
+                <AlertTriangle size={24} className="text-rose-500 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm text-rose-600 font-bold">データの消失にご注意ください</p>
+                  <p className="text-[11px] text-rose-500 leading-relaxed">
+                    本アプリはサーバーへのデータ自動保存を行いません。ブラウザの履歴削除、端末の不具合、ブラウザの変更などでこれまでの記録がすべて消える可能性があります。重要な記録はこまめに「画像を保存」から端末内に書き出してください。
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-stone-500 leading-relaxed">
-                本サービスはAIによる推定結果を提供するものであり、医学的な助言や診断に代わるものではありません。
-                食事療法や運動プログラムを開始する前には、必ず医師にご相談ください。
-              </p>
+
+              <section className="space-y-3">
+                <h3 className="font-black text-stone-800 flex items-center gap-2 px-4">
+                  <Shield size={18} className="text-stone-400" /> 免責事項
+                </h3>
+                <div className="text-xs text-stone-500 space-y-3 leading-relaxed px-4">
+                  <p>1. 本アプリが提供する食事解析（カロリー、PFCバランス等）および姿勢解析の結果は、AIによる推定に基づくものであり、その正確性や医学的な有効性を保証するものではありません。</p>
+                  <p>2. 本アプリの結果は医学的な診断、予防、または治療を目的としたものではありません。健康増進の参考としてご利用いただき、体調に不安がある場合は必ず医療機関を受診してください。</p>
+                  <p>3. 本アプリの利用により生じたいかなる損害についても、当運営は一切の責任を負いかねます。ご自身の判断と責任においてご利用ください。</p>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="font-black text-stone-800 flex items-center gap-2 px-4">
+                  <BookOpen size={18} className="text-stone-400" /> 禁止事項
+                </h3>
+                <div className="text-xs text-stone-500 space-y-1 ml-4 leading-relaxed px-4">
+                  <p>・公序良俗に反する写真の撮影および解析</p>
+                  <p>・本サービスの不適切な解析負荷をかける行為</p>
+                  <p>・当アプリの運営を妨げる行為</p>
+                </div>
+              </section>
+
+              <NativeAdCard />
             </div>
           </div>
         );
       case AppView.INFO:
         return (
           <div className="space-y-6">
-            <h2 className="text-xl font-black text-rose-500 flex items-center gap-2">
-              <Info size={24} /> 運営情報
+            <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
+              <Info size={28} /> 運営情報
             </h2>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-stone-400 text-sm">アプリ名</span>
-                <span className="font-black">たべとっと。</span>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-5 p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center border-b border-stone-50 pb-2">
+                  <span className="text-stone-400 text-sm font-bold">アプリ名</span>
+                  <span className="font-black text-stone-700 italic">たべとっと。 (Web版)</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-stone-50 pb-2">
+                  <span className="text-stone-400 text-sm font-bold">運営組織</span>
+                  <span className="font-black text-stone-700">R.evo</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-stone-50 pb-2">
+                  <span className="text-stone-400 text-sm font-bold">責任者</span>
+                  <span className="font-black text-stone-700">たべとっと開発チーム</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-stone-50 pb-2">
+                  <span className="text-stone-400 text-sm font-bold">連絡先</span>
+                  <span className="font-black text-rose-500 text-sm">tabetotto@gmail.com</span>
+                </div>
+                <div className="flex justify-between items-center pb-2">
+                  <span className="text-stone-400 text-sm font-bold">バージョン</span>
+                  <span className="font-black text-stone-400 text-xs">v1.2.0 (Web Architecture)</span>
+                </div>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-stone-400 text-sm">提供元</span>
-                <span className="font-black">Tabetotto Project</span>
+
+              <div className="bg-stone-50 rounded-2xl p-4 text-center">
+                <p className="text-xs text-stone-500 leading-relaxed font-bold">
+                  「たべとっと。」は個人の健康をサポートするために活動しています。<br/>
+                  フィードバックや応援のメッセージをお待ちしております。
+                </p>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-stone-400 text-sm">バージョン</span>
-                <span className="font-black">v1.0 (Web)</span>
-              </div>
-              <div className="py-4">
-                <p className="text-xs text-stone-400 text-center">お問い合わせは、アプリ公式SNSまでご連絡ください。</p>
-              </div>
+
+              <AndroidApp案内 />
             </div>
           </div>
         );
@@ -131,16 +254,27 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
     }
   };
 
+  const getTitle = () => {
+    switch (view) {
+      case AppView.USAGE: return "使い方";
+      case AppView.FAQ: return "FAQ";
+      case AppView.PRIVACY: return "プライバシーポリシー";
+      case AppView.TERMS: return "注意事項";
+      case AppView.INFO: return "運営情報";
+      default: return "情報";
+    }
+  };
+
   return (
     <div className="flex-1 w-full bg-[#fdfbf7] min-h-screen pb-safe">
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-4 flex items-center gap-3 border-b">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-4 flex items-center gap-3 border-b shadow-sm border-stone-100">
         <button 
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-stone-100 text-stone-600 active:scale-90 transition-all"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-stone-100 text-stone-600 active:scale-90 transition-all font-bold"
         >
           <ChevronLeft size={24} />
         </button>
-        <h1 className="font-black text-stone-700">情報</h1>
+        <h1 className="font-black text-stone-700">{getTitle()}</h1>
       </header>
 
       <motion.main 

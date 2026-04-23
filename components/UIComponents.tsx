@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, X, Delete, ImageIcon, Trash2 } from 'lucide-react';
 import { THEME } from '../theme';
@@ -121,7 +121,7 @@ export const Card: React.FC<{ children: React.ReactNode; className?: string; tit
 );
 
 export const FileInput: React.FC<{ label: string; onFileSelect: (file: File) => void; className?: string }> = ({ label, onFileSelect, className = "" }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -142,7 +142,7 @@ export const FileInput: React.FC<{ label: string; onFileSelect: (file: File) => 
 };
 
 export const CuteKeypad: React.FC<{ initialValue: string; unit: string; onConfirm: (val: string) => void; onCancel: () => void; }> = ({ initialValue, unit, onConfirm, onCancel }) => {
-  const [value, setValue] = useState(initialValue || '0');
+  const [value, setValue] = React.useState(initialValue || '0');
   const handlePress = (num: string) => {
     triggerHaptic(ImpactStyle.Light);
     if (num === '.' && value.includes('.')) return;
@@ -209,7 +209,7 @@ export const CuteKeypad: React.FC<{ initialValue: string; unit: string; onConfir
 };
 
 export const CuteCalendar: React.FC<{ initialDate: string; onConfirm: (date: string) => void; onCancel: () => void; }> = ({ initialDate, onConfirm, onCancel }) => {
-  const [date, setDate] = useState(initialDate);
+  const [date, setDate] = React.useState(initialDate);
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="w-full max-w-md rounded-[40px] p-8 border-4 shadow-2xl animate-in zoom-in-95 duration-300" style={{ backgroundColor: THEME.colors.appBg, borderColor: THEME.colors.border }}>
@@ -254,9 +254,9 @@ export const NumberInputDisplay: React.FC<{ label: string; value: number | strin
 );
 
 export const Modal: React.FC<{ isOpen: boolean; onClose: () => void; children: React.ReactNode; title?: string; }> = ({ isOpen, onClose, children, title }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen && contentRef.current) {
       contentRef.current.scrollTop = 0;
     }

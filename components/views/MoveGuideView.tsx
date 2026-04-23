@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React from "react";
 import { Activity, Utensils, Info, AlertCircle } from "lucide-react";
 import { THEME } from "../../theme";
 import { Card, Button } from "../UIComponents";
@@ -34,11 +34,11 @@ const MoveGuideView: React.FC<MoveGuideViewProps> = ({
   records,
   onBack,
 }) => {
-  const [selectedActivityIndex, setSelectedActivityIndex] = useState(0);
-  const [minutes, setMinutes] = useState(30);
+  const [selectedActivityIndex, setSelectedActivityIndex] = React.useState(0);
+  const [minutes, setMinutes] = React.useState(30);
 
   // 体重取得ロジックの改善
-  const { weight, isEstimated } = useMemo(() => {
+  const { weight, isEstimated } = React.useMemo(() => {
     // 1. 今日の体重
     if (todayRecord.weight && todayRecord.weight > 0) {
       return { weight: todayRecord.weight, isEstimated: false };
@@ -61,7 +61,7 @@ const MoveGuideView: React.FC<MoveGuideViewProps> = ({
   const activity = ACTIVITIES[selectedActivityIndex];
 
   // 今日の間食カロリー合計
-  const snackCalories = useMemo(() => {
+  const snackCalories = React.useMemo(() => {
     return todayRecord.mealAnalyses
       .filter((m) => m.mealType === "snack")
       .reduce((acc, m) => acc + (m.numericCalories ?? 0), 0);
@@ -83,7 +83,7 @@ const MoveGuideView: React.FC<MoveGuideViewProps> = ({
       : 0;
 
   // ダイエット目標に基づく調整目安
-  const dietAdvice = useMemo(() => {
+  const dietAdvice = React.useMemo(() => {
     if (
       user.dietMode?.enabled &&
       user.dietMode.goal === "loss" &&

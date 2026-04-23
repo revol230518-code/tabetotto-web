@@ -50,21 +50,6 @@ class WebAdService {
     
     return true;
   }
-
-  /**
-   * 広告スクリプトの動的ロード (審査通過後などの本番用)
-   */
-  loadAdSenseScript() {
-    if (this.globalDisabled || !config.publisherId) return;
-    if (document.getElementById('adsense-script')) return;
-
-    const script = document.createElement('script');
-    script.id = 'adsense-script';
-    script.async = true;
-    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${config.publisherId}`;
-    script.crossOrigin = 'anonymous';
-    document.head.appendChild(script);
-  }
 }
 
 export const webAdService = new WebAdService();

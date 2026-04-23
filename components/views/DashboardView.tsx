@@ -1,11 +1,5 @@
 import { PenTool, Utensils, Calendar } from "lucide-react";
-import React, {
-  useMemo,
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-} from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import { UserProfile, DailyRecord, AppView } from "../../types";
 import { calculateBMI, calculateCalorieTarget } from "../../utils";
@@ -38,11 +32,11 @@ const MascotBubble: React.FC<{
   anchorRef: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }> = ({ anchorRef, children }) => {
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+  const [coords, setCoords] = React.useState<{ top: number; left: number } | null>(
     null,
   );
 
-  const updatePosition = useCallback(() => {
+  const updatePosition = React.useCallback(() => {
     if (anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       // 修正: キャラが小さくなったため、位置を微調整
@@ -53,7 +47,7 @@ const MascotBubble: React.FC<{
     }
   }, [anchorRef]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // 初回位置合わせ
     updatePosition();
 
@@ -102,32 +96,32 @@ const DashboardView: React.FC<DashboardProps> = ({
   const bmi = calculateBMI(user.height, todayRecord.weight || 0);
 
   // タップ時の一時メッセージ
-  const [tapMessage, setTapMessage] = useState<string | null>(null);
+  const [tapMessage, setTapMessage] = React.useState<string | null>(null);
 
   // マスコットの表示位置を参照するためのRef
-  const mascotRef = useRef<HTMLDivElement>(null);
+  const mascotRef = React.useRef<HTMLDivElement>(null);
 
   // Calculate Calories
-  const totalCalories = useMemo(() => {
+  const totalCalories = React.useMemo(() => {
     return todayRecord.mealAnalyses.reduce(
       (acc, meal) => acc + (meal.numericCalories ?? 0),
       0,
     );
   }, [todayRecord]);
 
-  const targetRange = useMemo(() => calculateCalorieTarget(user), [user]);
+  const targetRange = React.useMemo(() => calculateCalorieTarget(user), [user]);
 
-  const weeklyReport = useMemo(() => {
+  const weeklyReport = React.useMemo(() => {
     const sortedRecords = Object.values(records).sort((a, b) => a.date.localeCompare(b.date));
     return generateWeeklyReport(sortedRecords);
   }, [records]);
 
   // マスコットの状態判定 (タップメッセージがあればそちらを優先表示)
-  const { condition: mascotCondition } = useMemo(() => {
+  const { condition: mascotCondition } = React.useMemo(() => {
     return determineMascotState(todayRecord, records, user);
   }, [todayRecord, records, user]);
 
-  const shortAdvice = useMemo(() => {
+  const shortAdvice = React.useMemo(() => {
     if (mascotCondition === "fat") return "ちょっと多めかもですね💦";
     if (mascotCondition === "tired") return "少しお疲れ気味ですか？🍵";
     if (mascotCondition === "hungry") return "しっかり食べてエネルギー補給！🍙";
@@ -138,7 +132,7 @@ const DashboardView: React.FC<DashboardProps> = ({
   const displayMessage = tapMessage || shortAdvice;
 
   // アニメーションクラスの決定
-  const animationClass = useMemo(() => {
+  const animationClass = React.useMemo(() => {
     if (mascotCondition === "fat") return "animate-slight-wobble";
     if (mascotCondition === "tired") return "animate-subtle-bounce";
     if (mascotCondition === "hungry") return "animate-tiny-scale";

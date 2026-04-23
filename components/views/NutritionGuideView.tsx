@@ -1,8 +1,9 @@
 import React from "react";
-import { PieChart, Fish, Wheat, Sprout, Apple, Droplet } from "lucide-react";
+import { ChevronLeft, PieChart, Fish, Wheat, Sprout, Apple, Droplet } from "lucide-react";
 import { THEME } from "../../theme";
 import { Card, Button } from "../UIComponents";
 import { PFC_COLORS } from "../../utils";
+import { NativeAdCard } from "../AdComponents";
 
 interface NutritionGuideViewProps {
   onBack?: () => void;
@@ -11,43 +12,49 @@ interface NutritionGuideViewProps {
 const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack }) => {
   return (
     <div className="flex flex-col min-h-screen pb-safe w-full no-scrollbar overflow-x-hidden" style={{ backgroundColor: THEME.colors.appBg }}>
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-4 flex items-center gap-3 border-b shadow-sm border-stone-100">
+        <button 
+          onClick={onBack}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-stone-100 text-stone-600 active:scale-90 transition-all font-bold"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="font-black text-stone-700">ダイエットの基本知識</h1>
+      </header>
       <main className="px-6 pt-6 pb-32 space-y-8 animate-in slide-in-from-right duration-300">
-        <div className="text-center space-y-4 py-4">
-          <div
-            className="w-20 h-20 bg-white rounded-[32px] shadow-sm border-2 border-b-4 flex items-center justify-center mx-auto mb-2"
-            style={{ borderColor: THEME.colors.readPrimary }}
-          >
-            <img
-              src="/tabetotto.mascot.svg"
-              alt="たべとっと"
-              className="w-12 h-12 object-contain motion-safe:animate-breathe-subtle"
-            />
+        
+        {/* 新規：記事2 反映 */}
+        <div className="space-y-6">
+          <h2 className="text-xl font-black text-rose-500">ダイエットの基本指標</h2>
+          <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4 text-sm text-stone-600 leading-relaxed">
+            <p>ダイエットを始めると、体重だけに意識が向きがちですが、体重は水分量や食事内容でも動きます。極端な判断は避け、全体像を見ることが大切です。</p>
+            <h4 className="font-bold text-stone-800">● BMIの考え方</h4>
+            <p>BMIは身長に対しての体重の目安です。一般的に18.5以上25未満が普通体重の範囲ですが、体質や体調があります。22が標準体重を考える基準としてよく使われます。数字だけですべてを判断せず、体調や生活習慣もあわせて見ることが大切です。</p>
+            <h4 className="font-bold text-stone-800">● 1kgあたりのエネルギー</h4>
+            <p>体脂肪を1kg減らすには、約7,000〜7,200kcalのマイナスが必要です。1日あたり230〜240kcal程度を食事や運動で調整するイメージを持つと、無理のない計画が立てやすくなります。</p>
           </div>
-          <h2
-            className="text-2xl font-black"
-            style={{ color: THEME.colors.readPrimary }}
-          >
-            バランスの基本
-          </h2>
-          <p
-            className="text-sm font-bold opacity-70 leading-relaxed max-w-[280px] mx-auto"
-            style={{ color: THEME.colors.textPrimary }}
-          >
-            健康的なダイエットには、
-            <br />
-            「5大栄養素」＋「食物繊維」
-            <br />
-            のバランスが重要です。
-          </p>
         </div>
 
+        {/* 新規：記事3 反映 */}
+        <div className="space-y-6">
+          <h2 className="text-xl font-black text-rose-500">続けやすい食事記録のコツ</h2>
+          <div className="bg-gradient-to-b from-rose-50 to-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-4 text-sm text-stone-600 leading-relaxed">
+            <p>食事記録が続かない理由は「ちゃんとやらないと意味がない」と考えてしまうことかもしれません。しかし、完璧さよりも「やめないこと」が価値になります。</p>
+            <ul className="list-disc list-inside space-y-2">
+              <li><strong>毎食きっちり記録しなくていい：</strong>忙しい日は1日1回だけ、気になる食事だけでも十分です。</li>
+              <li><strong>写真で残す：</strong>文章入力が面倒なら写真だけでもOK。「パンが多いな」「意外と食べてるな」という気づきが大切です。</li>
+              <li><strong>食べすぎた日があってもいい：</strong>反省しすぎず、次の日に戻ることの方が重要です。</li>
+            </ul>
+            <p className="font-bold text-stone-700">「0より1」が、最も効果的です。</p>
+          </div>
+        </div>
+
+        {/* 既存：栄養バランスの基本 */}
         <div className="space-y-6">
           <div className="flex items-center gap-3 opacity-40 mb-4 mt-8">
-            <div className="h-[2px] flex-1 bg-stone-400 rounded-full"></div>
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-stone-600">
-              3大栄養素 (PFC)
-            </span>
-            <div className="h-[2px] flex-1 bg-stone-400 rounded-full"></div>
+            <div className="h-[2px] flex-1 bg-stone-400 rounded-full" />
+            <span className="text-xs font-black uppercase tracking-[0.2em] text-stone-600">栄養バランスの基本</span>
+            <div className="h-[2px] flex-1 bg-stone-400 rounded-full" />
           </div>
 
           <Card
@@ -90,7 +97,7 @@ const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack }) => {
               </div>
             </div>
           </Card>
-
+          
           <Card
             className="!p-5 bg-white border-2 border-b-4 flex flex-col sm:flex-row items-start gap-4 organic-card"
             style={{ borderColor: PFC_COLORS.f }}
@@ -291,6 +298,8 @@ const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack }) => {
             バランスを整えていきましょう！
           </p>
         </div>
+
+        <NativeAdCard className="mt-8" />
 
         {onBack && (
           <div className="flex flex-col items-center mt-8 relative">

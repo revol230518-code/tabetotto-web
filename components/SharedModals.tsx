@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React from 'react';
 import { AlertCircle, CalendarPlus, Share2, Trash2, Check, Download, Loader2, Scan, Link as LinkIcon, Utensils, ArrowLeftRight, Columns, Maximize, FileText, Smile, Meh, Frown, Info } from 'lucide-react';
 import { PostureAnalysis, MealAnalysis, DailyRecord, PostureComparison } from '../types';
 import { Modal, Button } from './UIComponents';
@@ -126,13 +126,13 @@ export const PostureResultCarousel: React.FC<{
     sidePhoto?: string | null;
     analysis: PostureAnalysis;
 }> = ({ frontPhoto, sidePhoto, analysis }) => {
-    const [page, setPage] = useState(0);
+    const [page, setPage] = React.useState(0);
     const maxPages = sidePhoto ? 3 : 2;
-    const [showSkeleton, setShowSkeleton] = useState(false);
-    const [isDetecting, setIsDetecting] = useState(false);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [showSkeleton, setShowSkeleton] = React.useState(false);
+    const [isDetecting, setIsDetecting] = React.useState(false);
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-    useEffect(() => {
+    React.useEffect(() => {
         let active = true;
         if (showSkeleton && (page === 1 || page === 2)) {
             const currentPhoto = page === 1 ? frontPhoto : (sidePhoto || '');
@@ -255,7 +255,7 @@ export const CompareModal: React.FC<{
   onSaveNote: (comparison: PostureComparison) => void;
 }> = ({ isOpen, onClose, currentRecord, records, onSaveNote }) => {
   // モーダルが開いている間は全広告(バナー・MREC)を非表示にする
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
         hideBanner();
         hideMrec();
@@ -264,17 +264,17 @@ export const CompareModal: React.FC<{
     }
   }, [isOpen]);
 
-  const [targetDate, setTargetDate] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'split' | 'before' | 'after'>('split');
-  const [imageType, setImageType] = useState<'front' | 'side'>('front');
+  const [targetDate, setTargetDate] = React.useState<string | null>(null);
+  const [viewMode, setViewMode] = React.useState<'split' | 'before' | 'after'>('split');
+  const [imageType, setImageType] = React.useState<'front' | 'side'>('front');
   
   // Note states
-  const [feeling, setFeeling] = useState<'positive' | 'neutral' | 'negative' | 'none'>(currentRecord.postureComparison?.feeling || 'none');
-  const [note, setNote] = useState(currentRecord.postureComparison?.note || '');
-  const [isSaved, setIsSaved] = useState(false);
+  const [feeling, setFeeling] = React.useState<'positive' | 'neutral' | 'negative' | 'none'>(currentRecord.postureComparison?.feeling || 'none');
+  const [note, setNote] = React.useState(currentRecord.postureComparison?.note || '');
+  const [isSaved, setIsSaved] = React.useState(false);
 
   // Initialize targets logic
-  const candidates = useMemo(() => {
+  const candidates = React.useMemo(() => {
     const sorted = Object.keys(records).sort().reverse(); // Newest first
     const currentIndex = sorted.indexOf(currentRecord.date);
     
@@ -298,7 +298,7 @@ export const CompareModal: React.FC<{
     return { anchor: anchorDate, prev: prevDate, first: firstDate, threeMonth: threeMonthDate };
   }, [currentRecord, records]);
 
-  useEffect(() => {
+  React.useEffect(() => {
       if (isOpen) {
           if (candidates.anchor) setTargetDate(candidates.anchor);
           else if (candidates.prev) setTargetDate(candidates.prev);
@@ -519,7 +519,7 @@ export const PostureDetailModal: React.FC<{
   onToggleAnchor?: (isAnchor: boolean) => void;
 }> = ({ isOpen, onClose, analysis, photoBase64, sidePhotoBase64, onCompare, isAnchor, onToggleAnchor }) => {
   // モーダルが開いている間は全広告を非表示にする
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
         hideBanner();
         hideMrec(); // Ensure MREC is hidden
@@ -597,7 +597,7 @@ export const MealDetailModal: React.FC<{
   onUpdateExternalUrl?: (url: string) => void;
 }> = ({ isOpen, onClose, recordDate, meal, photoBase64, onDelete, onShare, onUpdateExternalUrl }) => {
   // モーダルが開いている間は全広告を非表示にする
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
         hideBanner();
         hideMrec(); // Ensure MREC is hidden
@@ -606,7 +606,7 @@ export const MealDetailModal: React.FC<{
     }
   }, [isOpen]);
 
-  const [urlInput, setUrlInput] = useState(meal?.externalUrl || '');
+  const [urlInput, setUrlInput] = React.useState(meal?.externalUrl || '');
   if (!meal) return null;
   const typeInfo = meal.mealType ? MEAL_TYPE_LABELS[meal.mealType] : null;
   const imageSrc = resolveMealImageSrc(photoBase64);
@@ -715,7 +715,7 @@ export const SharePreviewModal: React.FC<{
   selectedMealIndex?: number | null;
 }> = ({ isOpen, onClose, mealAnalysis, photoBase64, dateStr, initialBlob, currentView = 'MEAL', selectedMealIndex = null }) => {
   // モーダルが開いている間は全広告を非表示にする
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
         hideBanner();
         hideMrec(); // Ensure MREC is hidden
@@ -724,16 +724,16 @@ export const SharePreviewModal: React.FC<{
     }
   }, [isOpen]);
 
-  const [blob, setBlob] = useState<Blob | null>(initialBlob || null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isSharing, setIsSharing] = useState(false);
-  const [hasSaved, setHasSaved] = useState(false);
-  const [preparedShareUri, setPreparedShareUri] = useState<string | null>(null);
+  const [blob, setBlob] = React.useState<Blob | null>(initialBlob || null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [isSharing, setIsSharing] = React.useState(false);
+  const [hasSaved, setHasSaved] = React.useState(false);
+  const [preparedShareUri, setPreparedShareUri] = React.useState<string | null>(null);
 
   // photoBase64 が URI形式かどうか判定
   const isUriSource = photoBase64 && (photoBase64.startsWith('file:') || photoBase64.startsWith('content:') || photoBase64.startsWith('http'));
 
-  useEffect(() => {
+  React.useEffect(() => {
     let currentUri: string | null = null;
     let isMounted = true;
     const startTime = Date.now();
@@ -772,7 +772,7 @@ export const SharePreviewModal: React.FC<{
     };
   }, [isOpen, blob, isUriSource, photoBase64, currentView]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     let objectUrl: string | null = null;
     let isMounted = true;
 

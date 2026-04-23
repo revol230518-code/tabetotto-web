@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, Suspense, lazy, useRef } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { UserProfile, DailyRecord, AppView, PostureAnalysis, MealAnalysis, PostureComparison } from './types';
 import { CuteKeypad, CuteCalendar } from './components/UIComponents';
 import SideMenu from './components/SideMenu';
@@ -43,67 +43,67 @@ import { triggerHaptic } from './services/haptics';
 import { scrollToTop } from './utils/scrollToTop';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
-const App: React.FC = () => {
-  const [view, setView] = useState<AppView>(AppView.DASHBOARD);
-  const [user, setUser] = useState<UserProfile>({ 
+const App = () => {
+  const [view, setView] = React.useState<AppView>(AppView.DASHBOARD);
+  const [user, setUser] = React.useState<UserProfile>({ 
     height: 160, 
     targetWeight: 50, 
     nickname: 'ゲスト', 
     theme: 'default',
     hapticsEnabled: true
   });
-  const [records, setRecords] = useState<Record<string, DailyRecord>>({});
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [records, setRecords] = React.useState<Record<string, DailyRecord>>({});
+  const [isLoaded, setIsLoaded] = React.useState(false);
   
-  const [tokens, setTokens] = useState<number>(MAX_TOKENS);
-  const [lastRecovery, setLastRecovery] = useState<number>(Date.now());
+  const [tokens, setTokens] = React.useState<number>(MAX_TOKENS);
+  const [lastRecovery, setLastRecovery] = React.useState<number>(Date.now());
 
-  const [selectedMeal, setSelectedMeal] = useState<{ analysis: MealAnalysis, photo: string, date: string, index: number } | null>(null);
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [preGeneratedBlob, setPreGeneratedBlob] = useState<Blob | null>(null);
+  const [selectedMeal, setSelectedMeal] = React.useState<{ analysis: MealAnalysis, photo: string, date: string, index: number } | null>(null);
+  const [shareModalOpen, setShareModalOpen] = React.useState(false);
+  const [preGeneratedBlob, setPreGeneratedBlob] = React.useState<Blob | null>(null);
 
-  const [isPostureModalOpen, setIsPostureModalOpen] = useState(false);
-  const [showingPostureDate, setShowingPostureDate] = useState<string | null>(null);
+  const [isPostureModalOpen, setIsPostureModalOpen] = React.useState(false);
+  const [showingPostureDate, setShowingPostureDate] = React.useState<string | null>(null);
   
   // Compare Modal
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
-  const [comparingDate, setComparingDate] = useState<string | null>(null);
+  const [isCompareModalOpen, setIsCompareModalOpen] = React.useState(false);
+  const [comparingDate, setComparingDate] = React.useState<string | null>(null);
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [touchStart, setTouchStart] = useState<{x: number, y: number, isNoSwipeZone: boolean} | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [touchStart, setTouchStart] = React.useState<{x: number, y: number, isNoSwipeZone: boolean} | null>(null);
 
-  const [keypadConfig, setKeypadConfig] = useState<{
+  const [keypadConfig, setKeypadConfig] = React.useState<{
     initialValue: string;
     unit: string;
     onConfirm: (val: string) => void;
   } | null>(null);
 
-  const [calendarConfig, setCalendarConfig] = useState<{
+  const [calendarConfig, setCalendarConfig] = React.useState<{
     initialDate: string;
     onConfirm: (date: string) => void;
   } | null>(null);
 
-  const [restoredCapture, setRestoredCapture] = useState<{ data: any, pendingState: PendingCaptureState } | null>(null);
+  const [restoredCapture, setRestoredCapture] = React.useState<{ data: any, pendingState: PendingCaptureState } | null>(null);
   
-  const [isMrecVisible, setIsMrecVisible] = useState(false);
-  const [showStorageNotice, setShowStorageNotice] = useState(false);
+  const [isMrecVisible, setIsMrecVisible] = React.useState(false);
+  const [showStorageNotice, setShowStorageNotice] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const unsubscribe = onMrecVisibilityChange((visible) => {
       setIsMrecVisible(visible);
     });
     return unsubscribe;
   }, []);
 
-  const openKeypad = useCallback((initialValue: string, unit: string, onConfirm: (val: string) => void) => {
+  const openKeypad = React.useCallback((initialValue: string, unit: string, onConfirm: (val: string) => void) => {
     setKeypadConfig({ initialValue, unit, onConfirm });
   }, []);
 
-  const openCalendar = useCallback((initialDate: string, onConfirm: (date: string) => void) => {
+  const openCalendar = React.useCallback((initialDate: string, onConfirm: (date: string) => void) => {
     setCalendarConfig({ initialDate, onConfirm });
   }, []);
 
-  useEffect(() => { 
+  React.useEffect(() => { 
     const initApp = async () => {
       try {
         // 広告初期化を待たずに開始する（並列処理）
@@ -234,7 +234,7 @@ const App: React.FC = () => {
   }, []);
 
   // 広告制御: メニュー開閉時およびページ遷移時
-  useEffect(() => {
+  React.useEffect(() => {
     if (!isNativePlatform()) return;
 
     if (isMenuOpen) {
@@ -257,14 +257,14 @@ const App: React.FC = () => {
     }
   }, [isMenuOpen, view]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     document.documentElement.setAttribute('data-theme', user.theme || 'default');
   }, [user.theme]);
 
-  const recordsSaveTimeoutRef = useRef<number | null>(null);
-  const pendingRecordsRef = useRef<Record<string, DailyRecord> | null>(null);
+  const recordsSaveTimeoutRef = React.useRef<number | null>(null);
+  const pendingRecordsRef = React.useRef<Record<string, DailyRecord> | null>(null);
 
-  const flushRecordsSave = useCallback(() => {
+  const flushRecordsSave = React.useCallback(() => {
     if (recordsSaveTimeoutRef.current !== null) {
       clearTimeout(recordsSaveTimeoutRef.current);
       recordsSaveTimeoutRef.current = null;
@@ -296,7 +296,7 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         flushRecordsSave();
@@ -311,7 +311,7 @@ const App: React.FC = () => {
     };
   }, [flushRecordsSave]);
 
-  const safeSaveRecords = useCallback((newRecords: Record<string, DailyRecord>) => {
+  const safeSaveRecords = React.useCallback((newRecords: Record<string, DailyRecord>) => {
     if (!isLoaded) return;
     
     // 10日以上前の写真データを削除する処理
@@ -355,22 +355,24 @@ const App: React.FC = () => {
     }, 300);
   }, [isLoaded, flushRecordsSave]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isLoaded) localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
   }, [user, isLoaded]);
 
-  useEffect(() => {
-    safeSaveRecords(records);
-  }, [records]);
+  React.useEffect(() => {
+    if (isLoaded) {
+      safeSaveRecords(records);
+    }
+  }, [records, isLoaded]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY_TOKENS, tokens.toString());
       localStorage.setItem(STORAGE_KEY_LAST_RECOVERY, lastRecovery.toString());
     }
   }, [tokens, lastRecovery, isLoaded]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setInterval(() => {
       if (tokens < AUTO_MAX_TOKENS) {
         const now = Date.now();
@@ -447,7 +449,7 @@ const App: React.FC = () => {
     setTouchStart(null);
   };
 
-  const useToken = useCallback((): boolean => {
+  const useToken = React.useCallback((): boolean => {
     if (tokens > 0) {
       setTokens(prev => {
         const next = prev - 1;
@@ -472,13 +474,13 @@ const App: React.FC = () => {
   };
 
   const todayKey = getTodayString();
-  const todayRecord = useMemo(() => records[todayKey] || { id: todayKey, date: todayKey, mealPhotoUrls: [], mealAnalyses: [] }, [records, todayKey]);
+  const todayRecord = React.useMemo(() => records[todayKey] || { id: todayKey, date: todayKey, mealPhotoUrls: [], mealAnalyses: [] }, [records, todayKey]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     scrollToTop();
   }, [view]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedMeal || isPostureModalOpen || isCompareModalOpen || shareModalOpen) {
       scrollToTop();
     }
@@ -595,13 +597,14 @@ const App: React.FC = () => {
       case AppView.INFO:
         return <Suspense fallback={fallback}><StaticPageView view={view} onBack={() => setView(AppView.SETTINGS)} /></Suspense>;
       default:
-        return null;
+        console.warn(`Unexpected view encountered: ${view}. Redirecting to Dashboard.`);
+        return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={setView} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
     }
   };
 
   const showGlobalHeader = ![AppView.USAGE, AppView.FAQ, AppView.PRIVACY, AppView.TERMS, AppView.INFO, AppView.NUTRITION_GUIDE, AppView.MOVE_GUIDE, AppView.POSTURE_POINTS].includes(view);
   
-  const recordsList = useMemo(() => Object.values(records), [records]);
+  const recordsList = React.useMemo(() => Object.values(records), [records]);
 
   const isAnyModalOpen = !!selectedMeal || shareModalOpen || isPostureModalOpen || isCompareModalOpen || !!keypadConfig || !!calendarConfig;
 
@@ -609,7 +612,7 @@ const App: React.FC = () => {
   const shouldShowWebAd = !isNativePlatform() && webAdService.shouldShowAd(view);
 
   // モーダル表示時に背景スクロールを固定
-  useEffect(() => {
+  React.useEffect(() => {
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -617,9 +620,9 @@ const App: React.FC = () => {
     }
   }, [isAnyModalOpen]);
 
-  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showScrollTop, setShowScrollTop] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {

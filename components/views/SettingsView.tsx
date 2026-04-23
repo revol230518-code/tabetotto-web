@@ -6,7 +6,7 @@ import {
   CalendarClock,
   AlertCircle,
 } from "lucide-react";
-import React, { useState } from "react";
+import React from "react";
 import { THEME } from "../../theme";
 import { AppView, UserProfile } from "../../types";
 import {
@@ -42,38 +42,38 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   openKeypad,
   setView,
 }) => {
-  const [nickname, setNickname] = useState(user.nickname || "");
-  const [age, setAge] = useState<number | undefined>(user.age);
-  const [height, setHeight] = useState(user.height);
-  const [targetWeight, setTargetWeight] = useState(user.targetWeight || 0);
-  const [isProfileSaved, setIsProfileSaved] = useState(false);
+  const [nickname, setNickname] = React.useState(user.nickname || "");
+  const [age, setAge] = React.useState<number | undefined>(user.age);
+  const [height, setHeight] = React.useState(user.height);
+  const [targetWeight, setTargetWeight] = React.useState(user.targetWeight || 0);
+  const [isProfileSaved, setIsProfileSaved] = React.useState(false);
 
-  const [gender, setGender] = useState<UserProfile["gender"]>(user.gender);
-  const [activityLevel, setActivityLevel] = useState<
+  const [gender, setGender] = React.useState<UserProfile["gender"]>(user.gender);
+  const [activityLevel, setActivityLevel] = React.useState<
     UserProfile["activityLevel"]
   >(user.activityLevel);
 
   // テーマ設定
-  const [theme, setTheme] = useState<"default" | "matte-blue">(
+  const [theme, setTheme] = React.useState<"default" | "matte-blue">(
     user.theme || "default",
   );
 
-  const [dietEnabled, setDietEnabled] = useState(
+  const [dietEnabled, setDietEnabled] = React.useState(
     user.dietMode?.enabled ?? false,
   );
-  const [dietGoal, setDietGoal] = useState<
+  const [dietGoal, setDietGoal] = React.useState<
     NonNullable<UserProfile["dietMode"]>["goal"]
   >(user.dietMode?.goal ?? "maintain");
-  const [dietIntensity, setDietIntensity] = useState<
+  const [dietIntensity, setDietIntensity] = React.useState<
     NonNullable<UserProfile["dietMode"]>["intensity"]
   >(user.dietMode?.intensity ?? "loose");
-  const [dietTargetDate, setDietTargetDate] = useState<string | undefined>(
+  const [dietTargetDate, setDietTargetDate] = React.useState<string | undefined>(
     user.dietMode?.targetDate,
   );
 
-  const [isDietAccordionOpen, setIsDietAccordionOpen] = useState(false);
+  const [isDietAccordionOpen, setIsDietAccordionOpen] = React.useState(false);
 
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = React.useState(false);
 
   const handleSaveProfile = () => {
     onSave({

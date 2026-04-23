@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React from "react";
 import {
   Utensils,
   Calendar,
@@ -218,24 +218,24 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   onPostureClick,
   isMenuOpen,
 }) => {
-  const [range, setRange] = useState<"7d" | "1m" | "3m" | "all">("1m");
-  const [page, setPage] = useState(1);
+  const [range, setRange] = React.useState<"7d" | "1m" | "3m" | "all">("1m");
+  const [page, setPage] = React.useState(1);
   const ITEMS_PER_PAGE = 10;
   const MAX_RECORDS = 300;
 
-  const weeklyReport = useMemo(() => {
+  const weeklyReport = React.useMemo(() => {
     const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
     return generateWeeklyReport(sorted);
   }, [records]);
 
   // バナー⇄MREC切替ロジック (方式B)
-  const bottomSentinelRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-  const [isAtBottomStable, setIsAtBottomStable] = useState(false);
-  const stableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = React.useState(false);
+  const [isAtBottomStable, setIsAtBottomStable] = React.useState(false);
+  const stableTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // IntersectionObserverで最下部検知
-  useEffect(() => {
+  React.useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsAtBottom(entry.isIntersecting);
@@ -249,7 +249,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   }, []);
 
   // 到達後の安定化タイマー (300-500ms滞在で切替)
-  useEffect(() => {
+  React.useEffect(() => {
     if (isAtBottom) {
       stableTimerRef.current = setTimeout(() => {
         setIsAtBottomStable(true);
@@ -264,7 +264,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   }, [isAtBottom]);
 
   // 広告切替実行 (メニューが開いているときは何もしない=App側で消す)
-  useEffect(() => {
+  React.useEffect(() => {
     if (isMenuOpen) {
       // メニュー展開中はApp.tsxが全消去するので、ここでは何もしない
       // (または明示的にタイマーリセットなどしても良いが、useEffectの依存関係により再評価される)
@@ -287,7 +287,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     };
   }, [isAtBottomStable, isMenuOpen]);
 
-  const { targetRange, targetDateStr, dietSimulation } = useMemo(() => {
+  const { targetRange, targetDateStr, dietSimulation } = React.useMemo(() => {
     const tRange = calculateCalorieTarget(user);
     const tDate = user.dietMode?.targetDate
       ? user.dietMode.targetDate.slice(5).replace("-", "/")
@@ -344,17 +344,17 @@ const HistoryView: React.FC<HistoryViewProps> = ({
     };
   }, [user, records]);
 
-  const sortedRecords = useMemo(() => {
+  const sortedRecords = React.useMemo(() => {
     return [...records]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, MAX_RECORDS);
   }, [records]);
 
-  const pagedRecords = useMemo(() => {
+  const pagedRecords = React.useMemo(() => {
     return sortedRecords.slice(0, page * ITEMS_PER_PAGE);
   }, [sortedRecords, page]);
 
-  const chartData = useMemo(() => {
+  const chartData = React.useMemo(() => {
     const sorted = [...records].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
@@ -383,7 +383,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   }, [records, range]);
 
   // 体重グラフのドメインと3色ゾーンの計算
-  const weightDomain = useMemo(() => {
+  const weightDomain = React.useMemo(() => {
     if (chartData.length === 0) return [0, 100];
     const weights = chartData
       .map((d) => d.weight)

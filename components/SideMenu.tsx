@@ -91,8 +91,12 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, currentView, setVi
                     <div key={item.id} className="flex flex-col gap-1">
                         {/* Parent Item (H2) */}
                         <button
-                            onClick={() => handleSelect(item.id as AppView)}
-                            className={`w-full flex items-center gap-4 p-3 rounded-2xl transition-all active:scale-[0.98] ${isActive ? 'bg-white shadow-md ring-2' : 'hover:bg-white/50'}`}
+                            onClick={() => {
+                                if (Object.values(AppView).includes(item.id as AppView)) {
+                                    handleSelect(item.id as AppView);
+                                }
+                            }}
+                            className={`w-full flex items-center gap-4 p-3 rounded-2xl transition-all active:scale-[0.98] ${isActive ? 'bg-white shadow-md ring-2' : 'hover:bg-white/50'} ${!Object.values(AppView).includes(item.id as AppView) ? 'cursor-default' : ''}`}
                             style={isActive ? { boxShadow: `0 0 0 2px ${THEME.colors.mealPrimary}33` } : {}}
                         >
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-transform ${isActive ? 'scale-110' : ''}`} 

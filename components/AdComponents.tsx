@@ -20,10 +20,9 @@ export const WebAdUnit: React.FC<AdProps> = ({ className = "", slot = 'banner' }
     const config = webAdService.getConfig();
     const hasConfig = !!config.publisherId && !!config.slots[slot];
 
-    // 本番環境かつ設定がある場合は実際のタグを出力 (今回は土台のみ)
-    // Reactでscriptタグを扱う場合、dangerouslySetInnerHTML等が必要になるが、
-    // 審査前は「広告枠」が見えることが重要。
-    
+    // 設定がない場合は非表示
+    if (!hasConfig) return null;
+
     return (
         <div className={`web-ad-container my-4 flex flex-col items-center overflow-hidden ${className}`}>
             <div className="text-[8px] text-stone-300 font-black mb-1 uppercase tracking-widest">Sponsored</div>
@@ -35,17 +34,10 @@ export const WebAdUnit: React.FC<AdProps> = ({ className = "", slot = 'banner' }
                     height: slot === 'banner' ? '50px' : '250px' 
                 }}
             >
-                {hasConfig ? (
-                    <div className="flex flex-col items-center gap-1 opacity-40">
-                         <div className="text-[10px] font-black text-rose-300 animate-pulse">AdSense Active</div>
-                         <div className="text-[8px] text-stone-400 font-mono">{config.slots[slot]}</div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-1 opacity-20">
-                        <div className="w-8 h-8 rounded-full border-2 border-stone-300 flex items-center justify-center text-stone-400">?</div>
-                        <span className="text-[8px] font-black uppercase text-stone-400">Waiting for AdSense</span>
-                    </div>
-                )}
+                <div className="flex flex-col items-center gap-1 opacity-40">
+                      <div className="text-[10px] font-black text-rose-300 animate-pulse">AdSense Active</div>
+                      <div className="text-[8px] text-stone-400 font-mono">{config.slots[slot]}</div>
+                </div>
                 
                 {/* 装飾用ドット */}
                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
@@ -82,6 +74,10 @@ export const AdBelt: React.FC<AdProps> = ({ className = "" }) => {
  * Native: Webプレビュー用プレースホルダーを表示
  */
 export const NativeAdCard: React.FC<AdProps> = ({ className = "" }) => {
+    const config = webAdService.getConfig();
+    const hasConfig = !!config.publisherId && !!config.slots['mrec'];
+    if (!hasConfig) return null;
+
     return (
         <div className={`w-full p-4 rounded-[24px] bg-white border-2 border-rose-50 relative overflow-hidden shadow-sm ${className}`}>
              <div className="absolute top-0 left-0 bg-[#F88D8D] text-white text-[9px] font-black px-2 py-0.5 rounded-br-xl z-10 shadow-sm">

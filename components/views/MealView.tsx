@@ -789,6 +789,7 @@ const MealView: React.FC<MealViewProps> = ({
     }
   };
 
+
   return (
     <div className="flex flex-col min-h-screen pb-[250px] w-full no-scrollbar overflow-x-hidden relative">
       {/* Background Mascot (Watermark) */}

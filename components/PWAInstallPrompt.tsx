@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Download, X, Smartphone, PlusSquare, Share } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { triggerInstall, isStandalone, isIOS } from '../services/pwaService';
@@ -8,11 +8,11 @@ import { THEME } from '../theme';
 const STORAGE_KEY_HIDE_PROMPT = 'pwa_prompt_hidden_v1';
 
 export const PWAInstallPrompt: React.FC = () => {
-    const [isVisible, setIsVisible] = useState(false);
-    const [isIOSDevice, setIsIOSDevice] = useState(false);
-    const [showInstructions, setShowInstructions] = useState(false);
+    const [isVisible, setIsVisible] = React.useState(false);
+    const [isIOSDevice, setIsIOSDevice] = React.useState(false);
+    const [showInstructions, setShowInstructions] = React.useState(false);
 
-    useEffect(() => {
+    React.useEffect(() => {
         // すでに隠すフラグがある場合や、スタンドアロン起動時は表示しない
         const isHidden = localStorage.getItem(STORAGE_KEY_HIDE_PROMPT);
         if (isHidden === 'true' || isStandalone()) return;

@@ -12,7 +12,7 @@ import {
   PlayCircle,
   ArrowLeftRight,
 } from "lucide-react";
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import {
   hideBanner,
@@ -76,11 +76,11 @@ const MascotBubble: React.FC<{
   anchorRef: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }> = ({ anchorRef, children }) => {
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+  const [coords, setCoords] = React.useState<{ top: number; left: number } | null>(
     null,
   );
 
-  const updatePosition = useCallback(() => {
+  const updatePosition = React.useCallback(() => {
     if (anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       // マスコットの右上に配置
@@ -91,7 +91,7 @@ const MascotBubble: React.FC<{
     }
   }, [anchorRef]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     updatePosition();
     window.addEventListener("scroll", updatePosition, { passive: true });
     window.addEventListener("resize", updatePosition);
@@ -158,31 +158,31 @@ const PostureView: React.FC<PostureViewProps> = ({
   restoredCapture,
   clearRestoredCapture,
 }) => {
-  const [step, setStep] = useState<
+  const [step, setStep] = React.useState<
     "intro" | "ad_wait" | "side_wait" | "analyze" | "result"
   >("intro");
 
-  useEffect(() => {
+  React.useEffect(() => {
     scrollToTop();
   }, [step]);
 
-  const [frontImage, setFrontImage] = useState<string | null>(null);
-  const [sideImage, setSideImage] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<PostureAnalysis | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasSaved, setHasSaved] = useState(false);
-  const [isAnchor, setIsAnchor] = useState(false);
-  const [mascotAnimation, setMascotAnimation] = useState("");
-  const [triviaMessage, setTriviaMessage] = useState("");
-  const mascotRef = useRef<HTMLDivElement>(null);
+  const [frontImage, setFrontImage] = React.useState<string | null>(null);
+  const [sideImage, setSideImage] = React.useState<string | null>(null);
+  const [analysis, setAnalysis] = React.useState<PostureAnalysis | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [hasSaved, setHasSaved] = React.useState(false);
+  const [isAnchor, setIsAnchor] = React.useState(false);
+  const [mascotAnimation, setMascotAnimation] = React.useState("");
+  const [triviaMessage, setTriviaMessage] = React.useState("");
+  const mascotRef = React.useRef<HTMLDivElement>(null);
 
   // ローディング中などの状態に応じたメッセージを決定
-  const displayBubbleMessage = useMemo(() => {
+  const displayBubbleMessage = React.useMemo(() => {
     return triviaMessage;
   }, [triviaMessage]);
 
   // 処理中のマスコット演出
-  useEffect(() => {
+  React.useEffect(() => {
     let interval: NodeJS.Timeout;
     if (step === "analyze") {
       setTriviaMessage("じーっ...👀");
@@ -201,7 +201,7 @@ const PostureView: React.FC<PostureViewProps> = ({
   }, [step]);
 
   // 復帰時の処理
-  useEffect(() => {
+  React.useEffect(() => {
     if (
       restoredCapture &&
       restoredCapture.pendingState.captureKind === "posture"
@@ -267,7 +267,7 @@ const PostureView: React.FC<PostureViewProps> = ({
     }
   }, [restoredCapture]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setTriviaMessage(
       SELF_RECORD_MESSAGES[
         Math.floor(Math.random() * SELF_RECORD_MESSAGES.length)
@@ -291,7 +291,7 @@ const PostureView: React.FC<PostureViewProps> = ({
     setTimeout(() => setMascotAnimation(""), 1000);
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isMenuOpen) return;
 
     if (step === "analyze" || step === "ad_wait" || step === "side_wait") {
