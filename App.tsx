@@ -608,7 +608,7 @@ const App = () => {
       case AppView.DASHBOARD:
         return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={setView} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
       case AppView.MEAL:
-        return <Suspense fallback={fallback}><MealView user={user} todayRecord={todayRecord} tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handleMealSave} onClose={() => setView(AppView.DASHBOARD)} openKeypad={openKeypad} openCalendar={openCalendar} onOpenGuide={() => setView(AppView.NUTRITION_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} /></Suspense>;
+        return <Suspense fallback={fallback}><MealView user={user} todayRecord={todayRecord} tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handleMealSave} onClose={() => setView(AppView.DASHBOARD)} openKeypad={openKeypad} openCalendar={openCalendar} onOpenGuide={() => setView(AppView.NUTRITION_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} onShareRequest={(blob) => { setPreGeneratedBlob(blob); setShareModalOpen(true); }} /></Suspense>;
       case AppView.HISTORY:
         return <Suspense fallback={fallback}><HistoryView records={recordsList} user={user} onMealClick={(m, p, d, i) => { setPreGeneratedBlob(null); setSelectedMeal({ analysis: m, photo: p, date: d, index: i }); }} onPostureClick={(r) => { setShowingPostureDate(r.date); setIsPostureModalOpen(true); }} isMenuOpen={isMenuOpen} /></Suspense>;
       case AppView.POSTURE:
@@ -870,8 +870,6 @@ const App = () => {
             photoBase64={selectedMeal ? selectedMeal.photo : ''} 
             dateStr={selectedMeal ? selectedMeal.date : getTodayString()} 
             initialBlob={preGeneratedBlob}
-            currentView={view}
-            selectedMealIndex={selectedMeal ? selectedMeal.index : null}
           />
       )}
 

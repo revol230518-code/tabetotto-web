@@ -34,7 +34,6 @@ import { getOnboardingFlags, setOnboardingFlags } from "../../services/onboardin
 import { DailyRecord, UserProfile, MealAnalysis, MealType } from "../../types";
 import { getTodayString, MEAL_TYPE_LABELS, calculateBMI } from "../../utils";
 import { Button, FileInput } from "../UIComponents";
-import { Share } from "@capacitor/share";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Capacitor } from "@capacitor/core";
 import { renderMealResultToBlob } from "../../services/renderers/mealResultRenderer";
@@ -46,8 +45,7 @@ import {
   clearPendingCapture,
   PendingCaptureState,
 } from "../../services/cameraRecovery";
-import { savePendingShare, clearPendingShare } from "../../services/shareRecovery";
-import { prepareShareFile, cleanupShareFile } from "../../services/shareFileService";
+import { executeShare } from "../../utils/share";
 import { scrollToTop } from "../../utils/scrollToTop";
 
 import { motion } from 'motion/react';
@@ -160,6 +158,7 @@ interface MealViewProps {
   isMenuOpen: boolean; // Added for ad control
   restoredCapture?: { data: any; pendingState: PendingCaptureState } | null;
   clearRestoredCapture?: () => void;
+  onShareRequest?: (blob: Blob) => void;
 }
 
 const MealView: React.FC<MealViewProps> = ({
@@ -175,6 +174,7 @@ const MealView: React.FC<MealViewProps> = ({
   isMenuOpen,
   restoredCapture,
   clearRestoredCapture,
+  onShareRequest,
 }) => {
   const [step, setStep] = useState<"intro" | "ad_wait" | "preparing" | "analyze" | "manual" | "result" | "completed">(
     "intro",
@@ -231,7 +231,6 @@ const MealView: React.FC<MealViewProps> = ({
   };
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [preparedShareUri, setPreparedShareUri] = useState<string | null>(null);
 
   useEffect(() => {
     if (previewBlob) {
@@ -243,7 +242,6 @@ const MealView: React.FC<MealViewProps> = ({
       };
     } else {
       setPreviewUrl(null);
-      setPreparedShareUri(null);
       return () => {};
     }
   }, [previewBlob]);
@@ -741,87 +739,40 @@ const MealView: React.FC<MealViewProps> = ({
     }
 
     setIsSharing(true);
-    let fallbackUri: string | null = null;
-
+    
     try {
       const blob = previewBlob;
+      const result = await executeShare({
+        title: "たべとっと。で食事を記録しました",
+        text: "今日の食事記録です✨ #たべとっと",
+        blob: blob,
+        filename: `tabetotto_share_${recordDate.replace(/-/g, '')}.jpg`
+      });
 
-      if (Capacitor.isNativePlatform()) {
-        let uriToShare = preparedShareUri;
-        
-        if (!uriToShare) {
-          fallbackUri = await prepareShareFile(blob, 'tabetotto_share_meal_fallback');
-          uriToShare = fallbackUri;
-        }
-
-        if (!uriToShare) {
-          console.error('share:native:fail', 'No URI available');
-          alert("シェアの準備に失敗しました");
-          return;
-        }
-
-        await savePendingShare({
-          shareKind: 'meal-direct',
-          currentView: 'MEAL',
-          recordDate: recordDate,
-          selectedMealDate: null,
-          selectedMealIndex: null,
-          shareModalOpen: false,
-          startedAt: Date.now(),
-          requestId: Date.now().toString(),
-          restoreStatus: 'pending'
-        });
-
-        await Share.share({
-          title: "たべとっと。で食事を記録しました",
-          text: "今日の食事記録です✨ #たべとっと",
-          url: uriToShare,
-        });
-      } else if (
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare({
-          files: [new File([blob], "share.jpg", { type: "image/jpeg" })],
-        })
-      ) {
-        const file = new File([blob], "diet_record.jpg", {
-          type: "image/jpeg",
-        });
-        
-        await savePendingShare({
-          shareKind: 'meal-direct',
-          currentView: 'MEAL',
-          recordDate: recordDate,
-          selectedMealDate: null,
-          selectedMealIndex: null,
-          shareModalOpen: false,
-          startedAt: Date.now(),
-          requestId: Date.now().toString(),
-          restoreStatus: 'pending'
-        });
-
-        await navigator.share({
-          files: [file],
-          title: "たべとっと。で食事を記録しました",
-          text: "今日の食事記録です✨ #たべとっと",
-        });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `tabetotto_share_${recordDate}.jpg`;
-        a.click();
-        URL.revokeObjectURL(url);
-        alert("画像を保存しました");
+      if (result === 'success') {
+          // Success
+      } else if (result === 'fallback') {
+          // Fallback UI or Modal
+          if (onShareRequest) {
+            onShareRequest(blob);
+          } else {
+            // 最悪のフォールバック
+            alert("シェア機能が利用できません。画像を長押しして保存してください。");
+          }
+      } else if (result === 'error') {
+          if (onShareRequest) {
+            onShareRequest(blob);
+          } else {
+            alert("シェアに失敗しました");
+          }
       }
-    } catch (e) {
-      console.error("share:native:fail", e);
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.error("share:fail", e);
+        if (onShareRequest) onShareRequest(previewBlob);
+      }
     } finally {
       setIsSharing(false);
-      await clearPendingShare();
-      if (fallbackUri) {
-        cleanupShareFile(fallbackUri);
-      }
     }
   };
 

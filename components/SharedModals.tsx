@@ -8,9 +8,8 @@ import { detectPose, drawPoseOnCanvas } from '../services/poseService';
 import { THEME } from '../theme';
 import { OFFICIAL_MASCOT_SRC } from '../constants/mascot';
 import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
-import { savePendingShare, clearPendingShare } from '../services/shareRecovery';
-import { prepareShareFile, prepareShareFileFromUri, cleanupShareFile } from '../services/shareFileService';
+import { executeShare, executeDownload } from '../utils/share';
+import { isIOS } from '../utils/platform';
 import { hideBanner, showBanner, hideMrec } from '../services/admobService';
 
 // --- Micro Components for Meal Detail ---
@@ -711,9 +710,7 @@ export const SharePreviewModal: React.FC<{
   photoBase64: string;
   dateStr: string;
   initialBlob?: Blob | null;
-  currentView?: string;
-  selectedMealIndex?: number | null;
-}> = ({ isOpen, onClose, mealAnalysis, photoBase64, dateStr, initialBlob, currentView = 'MEAL', selectedMealIndex = null }) => {
+}> = ({ isOpen, onClose, mealAnalysis, photoBase64, dateStr, initialBlob }) => {
   // モーダルが開いている間は全広告を非表示にする
   React.useEffect(() => {
     if (isOpen) {
@@ -728,168 +725,107 @@ export const SharePreviewModal: React.FC<{
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [isSharing, setIsSharing] = React.useState(false);
   const [hasSaved, setHasSaved] = React.useState(false);
-  const [preparedShareUri, setPreparedShareUri] = React.useState<string | null>(null);
+  const [showLongPressGuide, setShowLongPressGuide] = React.useState(false);
+  const [shareError, setShareError] = React.useState<string | null>(null);
 
-  // photoBase64 が URI形式かどうか判定
-  const isUriSource = photoBase64 && (photoBase64.startsWith('file:') || photoBase64.startsWith('content:') || photoBase64.startsWith('http'));
-
+  // blobが提供されていない場合に生成する処理
   React.useEffect(() => {
-    let currentUri: string | null = null;
+    if (!isOpen) return;
+    
     let isMounted = true;
-    const startTime = Date.now();
+    const generateImage = async () => {
+        // Blobが提供されている場合はそれを使う
+        if (initialBlob) {
+            setBlob(initialBlob);
+            const url = URL.createObjectURL(initialBlob);
+            if (isMounted) setPreviewUrl(url);
+            return;
+        }
 
-    if (isOpen) {
-      console.log(`share:preview:render:start | route: ${currentView}`);
-      const prepare = async () => {
-        let uri: string | null = null;
+        const isUriSource = photoBase64 && (photoBase64.startsWith('file:') || photoBase64.startsWith('content:') || photoBase64.startsWith('http'));
         if (isUriSource) {
-          console.log(`share:preview:prepareFromUri:start | source: ${photoBase64}`);
-          uri = await prepareShareFileFromUri(photoBase64, 'tabetotto_share_preview');
-        } else if (blob) {
-          console.log(`share:preview:prepareFromBlob:start`);
-          uri = await prepareShareFile(blob, 'tabetotto_share_preview');
-        }
-        
-        if (isMounted) {
-          currentUri = uri;
-          setPreparedShareUri(uri);
-          const elapsed = Date.now() - startTime;
-          console.log(`share:preview:render:end | preparedUri: ${uri} | elapsed: ${elapsed}ms`);
-        } else if (uri) {
-          cleanupShareFile(uri);
-        }
-      };
-      prepare();
-    } else {
-      setPreparedShareUri(null);
-    }
-
-    return () => {
-      isMounted = false;
-      if (currentUri) {
-        cleanupShareFile(currentUri);
-      }
-    };
-  }, [isOpen, blob, isUriSource, photoBase64, currentView]);
-
-  React.useEffect(() => {
-    let objectUrl: string | null = null;
-    let isMounted = true;
-
-    if (isOpen) {
-        if (blob) {
-            // 生成済みのBlobがある場合（手動生成フロー）
-            objectUrl = URL.createObjectURL(blob);
-            setPreviewUrl(objectUrl);
-        } else if (isUriSource) {
-            // 既にファイルとして保存されている場合（URIをそのまま使う）
             setPreviewUrl(Capacitor.convertFileSrc(photoBase64));
-        } else if (photoBase64) {
-            // 旧データ（Base64文字列）の場合 -> Blob生成してプレビュー
-            generateShareImageBlob(photoBase64, mealAnalysis, dateStr).then((generatedBlob) => {
-                if (isMounted && generatedBlob) {
-                    objectUrl = URL.createObjectURL(generatedBlob);
-                    setBlob(generatedBlob);
-                    setPreviewUrl(objectUrl);
-                }
-            });
+            // 本来は Blob が必要。
+            // しかし歴史的な経緯で photoBase64 が URI の場合、renderMealResultToBlob はそれを fetch するなりして処理するはず。
         }
-    }
+
+        // レンダリングする
+        try {
+            const generatedBlob = await generateShareImageBlob(photoBase64, mealAnalysis, dateStr);
+            if (isMounted && generatedBlob) {
+                setBlob(generatedBlob);
+                const url = URL.createObjectURL(generatedBlob);
+                setPreviewUrl(url);
+            }
+        } catch (err) {
+            console.error("Share image generation failed:", err);
+            if (isMounted) setShareError("画像の作成に失敗しました");
+        }
+    };
+
+    generateImage();
+
     return () => {
         isMounted = false;
-        if (objectUrl) {
-            URL.revokeObjectURL(objectUrl);
-        }
-        if (blob && !initialBlob) setBlob(null); // Cleanup generated blob
     };
-  }, [isOpen, blob, photoBase64, mealAnalysis, dateStr, initialBlob, isUriSource]);
+  }, [isOpen, initialBlob, photoBase64, mealAnalysis, dateStr]);
+
+  // Clean up object URL on unmount or refresh
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleShare = async () => {
-    if ((!blob && !isUriSource) || isSharing) return;
-    const startTime = Date.now();
+    if (!blob || isSharing) return;
+    
     setIsSharing(true);
-    let fallbackUri: string | null = null;
+    setShareError(null);
     
     try {
-        const pendingShareState = {
-          shareKind: 'share-preview' as const,
-          currentView: currentView || 'MEAL',
-          recordDate: dateStr,
-          selectedMealDate: dateStr,
-          selectedMealIndex: selectedMealIndex,
-          shareModalOpen: true,
-          startedAt: Date.now(),
-          requestId: Date.now().toString(),
-          restoreStatus: 'pending' as const
-        };
+        const result = await executeShare({
+            title: 'たべとっと。で食事を記録しました',
+            text: '今日の食事記録です✨ #たべとっと',
+            blob: blob,
+            filename: `tabetotto_${dateStr.replace(/-/g, '')}.jpg`
+        });
 
-        if (Capacitor.isNativePlatform()) {
-            console.log('share:native:start');
-            let uriToShare = preparedShareUri;
-            
-            if (!uriToShare) {
-                console.log('share:native:fallbackPrepare');
-                if (isUriSource) {
-                    fallbackUri = await prepareShareFileFromUri(photoBase64, 'tabetotto_share_preview_fallback');
-                } else if (blob) {
-                    fallbackUri = await prepareShareFile(blob, 'tabetotto_share_preview_fallback');
-                }
-                uriToShare = fallbackUri;
-                if (fallbackUri) console.log('share:native:fallbackUsed', fallbackUri);
-            } else {
-                console.log('share:native:usingPreparedUri', uriToShare);
+        if (result === 'success') {
+            // Success
+        } else if (result === 'fallback') {
+            setShowLongPressGuide(true);
+            if (!isIOS()) {
+                handleDownload();
             }
-
-            if (!uriToShare) {
-                console.error('share:native:fail', 'No URI available');
-                alert("シェアの準備に失敗しました");
-                return;
-            }
-            
-            await savePendingShare(pendingShareState);
-            await Share.share({
-                title: 'たべとっと。で食事を記録しました',
-                text: '今日の食事記録です✨ #たべとっと',
-                url: uriToShare,
-            });
-            const elapsed = Date.now() - startTime;
-            console.log(`share:native:success | elapsed: ${elapsed}ms`);
-        } else if (navigator.share && navigator.canShare && blob && navigator.canShare({ files: [new File([blob], "share.jpg", { type: "image/jpeg" })] })) {
-            const file = new File([blob], "diet_record.jpg", { type: "image/jpeg" });
-            await savePendingShare(pendingShareState);
-            await navigator.share({
-                files: [file],
-                title: 'たべとっと。で食事を記録しました',
-                text: '今日の食事記録です✨ #たべとっと'
-            });
-            console.log('share:web:success');
-        } else {
-            console.log('share:download:start');
-            handleDownload();
+        } else if (result === 'error') {
+            setShareError("共有に失敗しました");
+            setShowLongPressGuide(true);
         }
     } catch (e: any) {
-        console.error('share:native:fail', e);
-        if (e.name !== 'AbortError') handleDownload();
+        if (e.name !== 'AbortError') {
+            console.error('Share failed:', e);
+            setShowLongPressGuide(true);
+        }
     } finally {
         setIsSharing(false);
-        await clearPendingShare();
-        if (fallbackUri) {
-            cleanupShareFile(fallbackUri);
-        }
     }
   };
 
   const handleDownload = () => {
-      if (!previewUrl) return;
-      const a = document.createElement('a');
-      a.href = previewUrl;
-      a.download = `tabetotto_${dateStr}.jpg`;
-      a.click();
+    if (!blob) return;
+    try {
+      executeDownload(blob, `tabetotto_${dateStr.replace(/-/g, '')}.jpg`);
       setHasSaved(true);
+    } catch (e) {
+      console.error("Download failed:", e);
+      setShowLongPressGuide(true);
+    }
   };
 
   const handleClose = async () => {
-    await clearPendingShare();
     onClose();
   };
 
@@ -908,9 +844,41 @@ export const SharePreviewModal: React.FC<{
            </header>
 
            {previewUrl ? (
-               // 生成された画像サイズ(3:4)に合わせてコンテナも 3:4 に調整
-               <div className="w-full aspect-[3/4] shadow-2xl rounded-2xl overflow-hidden border-4 border-white animate-in zoom-in-95">
-                   <img src={previewUrl} className="w-full h-full object-contain bg-[#FFFDF5]" />
+               <div className="w-full relative">
+                   <div className="w-full aspect-[3/4] shadow-2xl rounded-2xl overflow-hidden border-4 border-white animate-in zoom-in-95 bg-white relative">
+                       <img 
+                          src={previewUrl} 
+                          className="w-full h-full object-contain bg-[#FFFDF5] cursor-pointer" 
+                          alt="Share Preview"
+                          referrerPolicy="no-referrer"
+                       />
+                       
+                       {showLongPressGuide && (
+                         <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 text-center animate-in fade-in duration-300 z-10">
+                            <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-[#F08D8D] space-y-3">
+                                <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-[#F08D8D]">
+                                    <Info size={24} />
+                                </div>
+                                <p className="text-sm font-black text-stone-700 leading-relaxed">
+                                  画像を長押しして<br/>
+                                  「"写真"に保存」を選んでください
+                                </p>
+                                <button 
+                                  onClick={() => setShowLongPressGuide(false)}
+                                  className="text-xs font-bold text-stone-400 underline"
+                                >
+                                  とじる
+                                </button>
+                            </div>
+                         </div>
+                       )}
+                   </div>
+                   
+                   {isIOS() && !showLongPressGuide && (
+                     <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-stone-800/80 text-white text-[10px] font-black px-4 py-1.5 rounded-full backdrop-blur-sm shadow-lg pointer-events-none whitespace-nowrap">
+                       長押しでも保存できます 👆
+                     </div>
+                   )}
                </div>
            ) : (
                <div className="w-full aspect-[3/4] flex flex-col items-center justify-center bg-stone-100 rounded-2xl border" style={{ borderColor: THEME.colors.border }}>
@@ -919,9 +887,16 @@ export const SharePreviewModal: React.FC<{
                </div>
            )}
 
+          {shareError && (
+             <div className="w-full p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-500">
+               <Info size={14} className="shrink-0" />
+               <p className="text-[10px] font-bold">{shareError}</p>
+             </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 w-full pt-2">
-               <Button onClick={handleShare} variant="secondary" isLoading={isSharing || (Capacitor.isNativePlatform() && !preparedShareUri)} disabled={(!blob && !isUriSource) || (Capacitor.isNativePlatform() && !preparedShareUri)} className="min-h-[56px] h-auto shadow-md !rounded-3xl py-3">
-                   <Share2 size={18} className="mr-2" /> {(Capacitor.isNativePlatform() && !preparedShareUri) ? "準備中..." : "シェア"}
+               <Button onClick={handleShare} variant="secondary" isLoading={isSharing} disabled={!blob} className="min-h-[56px] h-auto shadow-md !rounded-3xl py-3">
+                   <Share2 size={18} className="mr-2" /> シェア
                </Button>
                <button 
                   onClick={handleDownload} 
