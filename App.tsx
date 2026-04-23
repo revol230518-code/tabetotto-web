@@ -1,13 +1,15 @@
 import React, { Suspense, lazy } from 'react';
 import { UserProfile, DailyRecord, AppView, PostureAnalysis, MealAnalysis, PostureComparison } from './types';
+import { InitialSetupData } from './components/onboarding/InitialSetupFlow';
 import { CuteKeypad, CuteCalendar } from './components/UIComponents';
 import SideMenu from './components/SideMenu';
 import { PostureDetailModal, MealDetailModal, SharePreviewModal, CompareModal } from './components/SharedModals';
 import { Menu, Home, ArrowUp, Utensils, ShieldAlert, Loader2 } from 'lucide-react';
 import { AdBelt } from './components/AdComponents'; // AdBelt追加
 import { Modal, Button } from './components/UIComponents';
+import { getOnboardingFlags, setOnboardingFlags } from './services/onboardingService';
+import { OnboardingWrapper } from './components/onboarding/OnboardingWrapper';
 
-// View Imports
 const DashboardView = lazy(() => import('./components/views/DashboardView'));
 const MealView = lazy(() => import('./components/views/MealView'));
 const PostureView = lazy(() => import('./components/views/PostureView'));
@@ -54,6 +56,7 @@ const App = () => {
   });
   const [records, setRecords] = React.useState<Record<string, DailyRecord>>({});
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const [isOnboarding, setIsOnboarding] = React.useState(false);
   
   const [tokens, setTokens] = React.useState<number>(MAX_TOKENS);
   const [lastRecovery, setLastRecovery] = React.useState<number>(Date.now());
@@ -70,6 +73,29 @@ const App = () => {
   const [comparingDate, setComparingDate] = React.useState<string | null>(null);
 
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
+  const handleSaveSetup = (data: InitialSetupData) => {
+    setUser({
+        ...user,
+        nickname: data.nickname,
+        gender: data.gender,
+        age: data.age,
+        height: data.height,
+        targetWeight: data.targetWeight,
+        activityLevel: data.activityLevel
+    });
+
+    const newRecords = { ...records };
+    const today = getTodayString();
+    const record = newRecords[today] || { id: today, date: today, mealPhotoUrls: [], mealAnalyses: [] };
+    
+    newRecords[today] = {
+        ...record,
+        weight: data.weight
+    };
+    
+    setRecords(newRecords);
+  }
   const [touchStart, setTouchStart] = React.useState<{x: number, y: number, isNoSwipeZone: boolean} | null>(null);
 
   const [keypadConfig, setKeypadConfig] = React.useState<{
@@ -110,6 +136,11 @@ const App = () => {
         // admobService側でisNative判定をしているため、そのまま呼んでも安全
         initAdMob(); 
         
+        const flags = getOnboardingFlags();
+        if (!flags.hasSeenOnboarding) {
+          setIsOnboarding(true);
+        }
+
         const loadedUser = localStorage.getItem(STORAGE_KEY_USER);
         if (loadedUser) {
           try {
@@ -577,7 +608,7 @@ const App = () => {
       case AppView.DASHBOARD:
         return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={setView} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
       case AppView.MEAL:
-        return <Suspense fallback={fallback}><MealView tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handleMealSave} onClose={() => setView(AppView.DASHBOARD)} openKeypad={openKeypad} openCalendar={openCalendar} onOpenGuide={() => setView(AppView.NUTRITION_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} /></Suspense>;
+        return <Suspense fallback={fallback}><MealView user={user} todayRecord={todayRecord} tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handleMealSave} onClose={() => setView(AppView.DASHBOARD)} openKeypad={openKeypad} openCalendar={openCalendar} onOpenGuide={() => setView(AppView.NUTRITION_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} /></Suspense>;
       case AppView.HISTORY:
         return <Suspense fallback={fallback}><HistoryView records={recordsList} user={user} onMealClick={(m, p, d, i) => { setPreGeneratedBlob(null); setSelectedMeal({ analysis: m, photo: p, date: d, index: i }); }} onPostureClick={(r) => { setShowingPostureDate(r.date); setIsPostureModalOpen(true); }} isMenuOpen={isMenuOpen} /></Suspense>;
       case AppView.POSTURE:
@@ -754,6 +785,15 @@ const App = () => {
 
           {/* PWAインストール案内 */}
           <PWAInstallPrompt />
+          
+          {isOnboarding && <OnboardingWrapper 
+            onFinished={() => setIsOnboarding(false)} 
+            onSaveSetup={handleSaveSetup} 
+            onSkip={() => {
+                setOnboardingFlags({ hasSeenOnboarding: true });
+                setIsOnboarding(false);
+            }} 
+          />}
 
           {renderContent()}
           

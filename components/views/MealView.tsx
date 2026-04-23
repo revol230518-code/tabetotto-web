@@ -30,8 +30,9 @@ import {
 import { takePhoto, processBlobToBase64, processPhotoResultToBase64 } from "../../services/cameraService";
 import { analyzeMeal } from "../../services/gemini/meal";
 import { THEME } from "../../theme";
-import { MealAnalysis, MealType } from "../../types";
-import { getTodayString, MEAL_TYPE_LABELS } from "../../utils";
+import { getOnboardingFlags, setOnboardingFlags } from "../../services/onboardingService";
+import { DailyRecord, UserProfile, MealAnalysis, MealType } from "../../types";
+import { getTodayString, MEAL_TYPE_LABELS, calculateBMI } from "../../utils";
 import { Button, FileInput } from "../UIComponents";
 import { Share } from "@capacitor/share";
 import { Filesystem, Directory } from "@capacitor/filesystem";
@@ -139,6 +140,8 @@ const MascotBubble: React.FC<{
 };
 
 interface MealViewProps {
+  user: UserProfile;
+  todayRecord: DailyRecord;
   tokens: number;
   useToken: () => boolean;
   restoreTokens: () => Promise<boolean>;
@@ -160,6 +163,8 @@ interface MealViewProps {
 }
 
 const MealView: React.FC<MealViewProps> = ({
+  user,
+  todayRecord,
   tokens,
   useToken,
   restoreTokens,
@@ -171,13 +176,33 @@ const MealView: React.FC<MealViewProps> = ({
   restoredCapture,
   clearRestoredCapture,
 }) => {
-  const [step, setStep] = useState<"intro" | "ad_wait" | "preparing" | "analyze" | "result" | "completed">(
+  const [step, setStep] = useState<"intro" | "ad_wait" | "preparing" | "analyze" | "manual" | "result" | "completed">(
     "intro",
   );
+
+  const [showMealGuide, setShowMealGuide] = useState(false);
+  const [showRecordGuide, setShowRecordGuide] = useState(false);
+
+  useEffect(() => {
+    const flags = getOnboardingFlags();
+    if (flags.hasCompletedInitialSetup && !flags.hasSeenMealGuide) {
+      setShowMealGuide(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step === "completed") {
+        const flags = getOnboardingFlags();
+        if (flags.hasCompletedFirstMealRecord && !flags.hasSeenFirstRecordGuide) {
+            setShowRecordGuide(true);
+        }
+    }
+  }, [step]);
 
   useEffect(() => {
     scrollToTop();
   }, [step]);
+
 
   const [image, setImage] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<MealAnalysis | null>(null);
@@ -330,7 +355,7 @@ const MealView: React.FC<MealViewProps> = ({
     if (step === "analyze" || step === "preparing" || step === "ad_wait") {
       // 解析中・待機中は全広告禁止
       hideAdsForCamera();
-    } else if (step === "result") {
+    } else if (step === "result" || step === "manual") {
       // 結果画面はMRECだとコンテンツを隠すため、通常バナーに戻す
       hideMrec();
       showBanner();
@@ -339,13 +364,7 @@ const MealView: React.FC<MealViewProps> = ({
       hideBanner();
       showMrec();
     }
-
-    return () => {
-      // 制御はApp.tsx側に戻る
-    };
   }, [step, isMenuOpen]);
-
-  // トークン切れでad_waitになった場合の特別処理 (上記useEffectでカバー済み)
 
   const handleImageProcess = async (base64: string, skipSetup: boolean = false) => {
     if (!skipSetup) {
@@ -404,29 +423,21 @@ const MealView: React.FC<MealViewProps> = ({
 
     setImage(null);
     const initialAnalysis: MealAnalysis = {
-      menuName: "手入力メモ",
+      menuName: "",
       numericCalories: 0,
       pfcRatio: { p: 0, f: 0, c: 0 },
-      comment: "自分で記録しました",
+      comment: "",
       isFood: true,
       category: "food",
       mealType: "lunch",
     };
     setAnalysis(initialAnalysis);
-    setEditedMenuName(initialAnalysis.menuName);
-    setEditedCalories(initialAnalysis.numericCalories);
-    setEditedComment(initialAnalysis.comment);
+    setEditedMenuName("");
+    setEditedCalories(undefined);
+    setEditedComment("");
     setEditedMemo("");
     
-    // 手入力時も即時同期
-    setDebouncedPreviewData({
-      menuName: initialAnalysis.menuName,
-      calories: initialAnalysis.numericCalories,
-      comment: initialAnalysis.comment,
-      memo: "",
-    });
-    
-    setStep("result");
+    setStep("manual");
   };
 
   const getCurrentAnalysis = useCallback((): MealAnalysis => {
@@ -435,7 +446,7 @@ const MealView: React.FC<MealViewProps> = ({
       ...analysis,
       menuName: editedMenuName,
       numericCalories: editedCalories,
-      comment: editedComment, // 編集内容をそのまま使う
+      comment: editedComment,
       memo: editedMemo,
       mealType: mealTypeRef.current,
     };
@@ -486,7 +497,7 @@ const MealView: React.FC<MealViewProps> = ({
         ...analysis,
         menuName: debouncedPreviewData.menuName,
         numericCalories: debouncedPreviewData.calories,
-        comment: debouncedPreviewData.comment, // 編集内容をそのまま使う
+        comment: debouncedPreviewData.comment,
         memo: debouncedPreviewData.memo,
         mealType: mealTypeRef.current,
       };
@@ -524,7 +535,7 @@ const MealView: React.FC<MealViewProps> = ({
       const result = await takePhoto(CameraSource.Camera, "rear");
       clearPendingCapture();
       
-      // トークン消費確認 (元々 handleImageProcess の先頭にあるものをこちらでも早めに)
+      // トークン消費確認
       if (!useToken()) {
         setStep("ad_wait");
         return;
@@ -532,27 +543,31 @@ const MealView: React.FC<MealViewProps> = ({
       setStep("preparing");
       
       const base64 = await processPhotoResultToBase64(result);
-      handleImageProcess(base64, true); // true は token確認＆setStepをスキップするフラグとする
+      handleImageProcess(base64, true);
     } catch (e: any) {
       console.error("CAPTURE_ERROR", e);
+      let errorMessage = "エラーが発生しました。";
+      
       if (e.message === "CANCELLED") {
         // 何もしない
+      } else if (e.message?.includes("画像の読み込みに失敗しました")) {
+        errorMessage = e.message;
       } else if (e.message?.includes("Permission") || e.message?.includes("denied")) {
-        alert("カメラの使用が許可されていないようです。ブラウザの設定でカメラを許可するか、アルバムから写真を選択してください。");
+        errorMessage = "カメラの使用が許可されていないようです。ブラウザの設定でカメラを許可するか、アルバムから写真を選択してください。";
       } else if (!Capacitor.isNativePlatform()) {
-        alert("カメラの起動に失敗しました。ブラウザによってはカメラが使えない場合があります。アルバムからの選択をお試しください。");
+        errorMessage = "カメラの起動に失敗しました。アルバムからの選択をお試しください。";
       } else {
-        alert(`エラーが発生しました: ${e.message}`);
+        errorMessage = `画像の処理中にエラーが発生しました: ${e.message}`;
       }
       
-      // キャンセル時はIntroに戻るので、広告復帰はStep変更useEffectで行われる
+      if (e.message !== "CANCELLED") alert(errorMessage);
+      
       clearPendingCapture();
       setStep("intro");
     }
   };
 
   const handleRestore = async () => {
-    // リワード広告表示時はAdMobプラグインが全画面を覆うが、念のため既存バナーは非表示に
     await hideAdsForCamera();
     const success = await restoreTokens();
     if (success) {
@@ -562,7 +577,6 @@ const MealView: React.FC<MealViewProps> = ({
   };
 
   const handleRetake = () => {
-    // ユーザーからのフィードバック対応: 確認ダイアログを削除し、即座に戻る
     clearPendingCapture();
     setImage(null);
     setAnalysis(null);
@@ -642,8 +656,34 @@ const MealView: React.FC<MealViewProps> = ({
         fileUri = savedFile.uri;
       }
 
-      // 手入力の場合、fileUriは空文字で保存
       onSave(getCurrentAnalysis(), fileUri, recordDate);
+      setOnboardingFlags({ hasCompletedFirstMealRecord: true });
+      setHasSaved(true);
+      showToast("保存しました✨");
+      return true;
+    } catch (e) {
+      console.error("Save error:", e);
+      alert("保存中にエラーが発生しました");
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const performManualSave = async (): Promise<boolean> => {
+    if (!analysis || isSaving || hasSaved) return hasSaved;
+
+    // validation
+    if (!editedMenuName.trim()) {
+        alert("品名を入力してください");
+        return false;
+    }
+
+    setIsSaving(true);
+    try {
+      // fileUriは空文字で保存
+      onSave(getCurrentAnalysis(), "", recordDate);
+      setOnboardingFlags({ hasCompletedFirstMealRecord: true });
       setHasSaved(true);
       showToast("保存しました✨");
       return true;
@@ -658,6 +698,13 @@ const MealView: React.FC<MealViewProps> = ({
 
   const handleSaveToApp = async () => {
     const saved = await performSave();
+    if (saved) {
+      setStep("completed");
+    }
+  };
+
+  const handleSaveManualToApp = async () => {
+    const saved = await performManualSave();
     if (saved) {
       setStep("completed");
     }
@@ -693,7 +740,6 @@ const MealView: React.FC<MealViewProps> = ({
       if (!saved) return; // 保存失敗時は中断
     }
 
-    const startTime = Date.now();
     setIsSharing(true);
     let fallbackUri: string | null = null;
 
@@ -701,16 +747,11 @@ const MealView: React.FC<MealViewProps> = ({
       const blob = previewBlob;
 
       if (Capacitor.isNativePlatform()) {
-        console.log('share:native:start');
         let uriToShare = preparedShareUri;
         
         if (!uriToShare) {
-          console.log('share:native:fallbackPrepare');
           fallbackUri = await prepareShareFile(blob, 'tabetotto_share_meal_fallback');
           uriToShare = fallbackUri;
-          if (fallbackUri) console.log('share:native:fallbackUsed', fallbackUri);
-        } else {
-          console.log('share:native:usingPreparedUri', uriToShare);
         }
 
         if (!uriToShare) {
@@ -736,8 +777,6 @@ const MealView: React.FC<MealViewProps> = ({
           text: "今日の食事記録です✨ #たべとっと",
           url: uriToShare,
         });
-        const elapsed = Date.now() - startTime;
-        console.log(`share:native:success | elapsed: ${elapsed}ms`);
       } else if (
         navigator.share &&
         navigator.canShare &&
@@ -766,9 +805,7 @@ const MealView: React.FC<MealViewProps> = ({
           title: "たべとっと。で食事を記録しました",
           text: "今日の食事記録です✨ #たべとっと",
         });
-        console.log('share:web:success');
       } else {
-        console.log('share:download:start');
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -779,7 +816,6 @@ const MealView: React.FC<MealViewProps> = ({
       }
     } catch (e) {
       console.error("share:native:fail", e);
-      // alert("シェアに失敗しました");
     } finally {
       setIsSharing(false);
       await clearPendingShare();
@@ -792,77 +828,81 @@ const MealView: React.FC<MealViewProps> = ({
 
   return (
     <div className="flex flex-col min-h-screen pb-[250px] w-full no-scrollbar overflow-x-hidden relative">
-      {/* Background Mascot (Watermark) */}
+      {showMealGuide && (
+         <div className="fixed inset-0 z-[120] bg-black/40 flex items-center justify-center p-6" onClick={() => {
+             setShowMealGuide(false);
+             setOnboardingFlags({ hasSeenMealGuide: true });
+         }}>
+             <div className="bg-white p-6 rounded-3xl shadow-2xl animate-in fade-in zoom-in border-4 border-stone-200 w-full max-w-sm">
+                 <h3 className="font-black text-lg mb-2 text-stone-700">ごはんを記録しよう！</h3>
+                 <p className="text-sm text-stone-600 mb-4">写真で記録できます。<br/>写真がなくても手入力できます。</p>
+                 <Button onClick={(e) => {
+                     e.stopPropagation();
+                     setShowMealGuide(false);
+                     setOnboardingFlags({ hasSeenMealGuide: true });
+                 }} className="w-full">わかった！</Button>
+             </div>
+         </div>
+      )}
       <div className="absolute bottom-[-5%] -right-12 w-72 h-72 opacity-[0.08] pointer-events-none z-0 rotate-[-15deg]">
         <img src={OFFICIAL_MASCOT_SRC} alt="" className="w-full h-full object-contain grayscale brightness-150" />
       </div>
 
-      {/* Background Decor */}
-      <div
-        className="organic-blob w-80 h-80 top-20 -right-40 animate-float-slow will-change-transform"
-        style={{ backgroundColor: THEME.colors.mealSoft }}
-      ></div>
-      <div
-        className="organic-blob w-64 h-64 bottom-60 -left-32 animate-float-slow will-change-transform"
-        style={{
-          backgroundColor: THEME.colors.postureSoft,
-          animationDelay: "2s",
-        }}
-      ></div>
-
       <main className="mt-2 animate-in slide-in-from-bottom duration-300 relative z-10 pb-[250px]">
-        {(step === "intro" || step === "analyze" || step === "preparing") && (
+        {(step === "intro" || step === "analyze" || step === "preparing" || step === "manual") && (
           <div className="px-6 flex flex-col items-center space-y-2">
-            {/* Intro UI */}
-            <div className="flex items-center justify-center relative w-full mb-0">
-              <div className="relative w-full flex justify-start pl-2">
-                {onOpenGuide && step === "intro" && (
-                  <div className="absolute right-0 top-0 w-28 z-20">
-                    <Button
-                      variant="guide"
-                      onClick={onOpenGuide}
-                      className="btn-3d w-full px-2 py-2 text-[10px] min-h-[40px] h-auto flex flex-col items-center gap-0.5 shadow-sm transition-transform"
+            
+            {/* Intro / Manual mascot UI */}
+            {step !== "manual" && (
+                <div className="flex items-center justify-center relative w-full mb-0">
+                  <div className="relative w-full flex justify-start pl-2">
+                    {onOpenGuide && step === "intro" && (
+                      <div className="absolute right-0 top-0 w-28 z-20">
+                        <Button
+                          variant="guide"
+                          onClick={onOpenGuide}
+                          className="btn-3d w-full px-2 py-2 text-[10px] min-h-[40px] h-auto flex flex-col items-center gap-0.5 shadow-sm transition-transform"
+                        >
+                          <BookOpen size={16} strokeWidth={2.5} />
+                          <span className="whitespace-nowrap font-black">
+                            栄養ガイド
+                          </span>
+                        </Button>
+                      </div>
+                    )}
+
+                    <motion.div
+                      ref={mascotRef}
+                      whileTap={{ scale: 0.95 }}
+                      className={`relative z-10 ${mascotAnimation || "animate-float"}`}
+                      onClick={step === "intro" ? () => { triggerHaptic(); handleMascotTap(); } : undefined}
+                      style={{
+                        width: "150px",
+                        height: "150px",
+                        marginLeft: "-10px",
+                      }}
                     >
-                      <BookOpen size={16} strokeWidth={2.5} />
-                      <span className="whitespace-nowrap font-black">
-                        栄養ガイド
-                      </span>
-                    </Button>
+                      <img
+                        src={OFFICIAL_MASCOT_SRC}
+                        className="w-full h-auto object-contain drop-shadow-lg"
+                        style={{ padding: "16px" }}
+                        alt="Mascot"
+                      />
+                    </motion.div>
+
+                    {displayBubbleMessage && (
+                      <MascotBubble anchorRef={mascotRef}>
+                        <div
+                          className={`bg-white px-2.5 py-1 rounded-xl rounded-bl-none shadow-md border-2 border-stone-100 text-[10px] font-black text-stone-600 relative ${mascotAnimation || "animate-float"}`}
+                        >
+                          {displayBubbleMessage}
+                          <div className="absolute -bottom-1.5 left-2 w-2.5 h-2.5 bg-white border-b-2 border-l-2 border-stone-100 transform -rotate-12 skew-x-12"></div>
+                        </div>
+                      </MascotBubble>
+                    )}
                   </div>
-                )}
-
-                <motion.div
-                  ref={mascotRef}
-                  whileTap={{ scale: 0.95 }}
-                  className={`relative z-10 ${mascotAnimation || "animate-float"}`}
-                  onClick={step === "intro" ? () => { triggerHaptic(); handleMascotTap(); } : undefined}
-                  style={{
-                    width: "150px",
-                    height: "150px",
-                    marginLeft: "-10px",
-                  }}
-                >
-                  <img
-                    src={OFFICIAL_MASCOT_SRC}
-                    className="w-full h-auto object-contain drop-shadow-lg"
-                    style={{ padding: "16px" }}
-                    alt="Mascot"
-                  />
-                </motion.div>
-
-                {/* 吹き出し表示 (Portal経由でBody直下にレンダリング) */}
-                {displayBubbleMessage && (
-                  <MascotBubble anchorRef={mascotRef}>
-                    <div
-                      className={`bg-white px-2.5 py-1 rounded-xl rounded-bl-none shadow-md border-2 border-stone-100 text-[10px] font-black text-stone-600 relative ${mascotAnimation || "animate-float"}`}
-                    >
-                      {displayBubbleMessage}
-                      <div className="absolute -bottom-1.5 left-2 w-2.5 h-2.5 bg-white border-b-2 border-l-2 border-stone-100 transform -rotate-12 skew-x-12"></div>
-                    </div>
-                  </MascotBubble>
-                )}
-              </div>
-            </div>
+                </div>
+            )}
 
             {step === "intro" && (
               <>
@@ -888,7 +928,6 @@ const MealView: React.FC<MealViewProps> = ({
                     </Button>
                   </div>
 
-                  {/* アルバムと手入力を横並びにする */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="relative group">
                       <Button
@@ -944,6 +983,73 @@ const MealView: React.FC<MealViewProps> = ({
                 </div>
               </div>
             )}
+            
+            {step === "manual" && (
+                <div className="w-full animate-in slide-in-from-bottom duration-300 pt-4 space-y-4">
+                    <div className="text-center space-y-1 pt-4">
+                      <h2 className="text-xl font-black text-stone-700">手入力で記録</h2>
+                      <p className="text-[11px] font-bold text-stone-400">
+                        写真なしでも、食べた内容をメモできます
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* 食事区分 */}
+                      <div className="bg-white p-1.5 rounded-[24px] border-2 flex justify-between gap-1 shadow-sm" style={{ borderColor: THEME.colors.border }}>
+                        {(Object.keys(MEAL_TYPE_LABELS) as MealType[]).map((type) => {
+                            const info = MEAL_TYPE_LABELS[type];
+                            const isActive = selectedMealType === type;
+                            return (
+                                <button
+                                    key={type}
+                                    onClick={() => { triggerHaptic(ImpactStyle.Light); setSelectedMealType(type); }}
+                                    className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-[20px] transition-all ${isActive ? info.activeColor + " shadow-md" : "text-stone-300"}`}
+                                >
+                                    <info.icon size={16} strokeWidth={2.5} className="mb-0.5" />
+                                    <span className="text-[9px] font-black tracking-tight">{info.label}</span>
+                                </button>
+                            );
+                        })}
+                      </div>
+
+                      {/* 品名 */}
+                      <div className="bg-white p-5 rounded-[28px] border-2 border-stone-200 shadow-sm focus-within:border-stone-400">
+                          <label className="text-[10px] font-black text-stone-400 uppercase mb-2 flex items-center gap-1.5">
+                              <Utensils size={10} /> 品名
+                          </label>
+                          <input type="text" value={editedMenuName} onChange={(e) => setEditedMenuName(e.target.value)} placeholder="料理名を入力" className="w-full bg-transparent outline-none text-lg font-black text-stone-700 placeholder:text-stone-200" />
+                      </div>
+                      
+                      {/* カロリー */}
+                      <div className="bg-white p-5 rounded-[28px] border-2 border-stone-200 shadow-sm focus-within:border-stone-400">
+                          <label className="text-[10px] font-black text-stone-400 uppercase mb-2 flex items-center gap-1.5">
+                              <Calculator size={10} /> カロリー (kcal)
+                          </label>
+                          <input type="number" value={editedCalories ?? ""} onChange={(e) => setEditedCalories(e.target.value === "" ? undefined : Number(e.target.value))} placeholder="0" className="w-full bg-transparent outline-none text-lg font-black text-stone-700 placeholder:text-stone-200" />
+                      </div>
+                      
+                      {/* メモ */}
+                      <div className="bg-white p-5 rounded-[28px] border-2 border-stone-200 shadow-sm focus-within:border-stone-400">
+                          <label className="text-[10px] font-black text-stone-400 uppercase mb-2 flex items-center gap-1.5">
+                              <MessageSquare size={10} /> メモ
+                          </label>
+                          <textarea value={editedMemo} onChange={(e) => setEditedMemo(e.target.value)} placeholder="メモ" className="w-full bg-transparent outline-none text-sm font-bold text-stone-600 placeholder:text-stone-200 min-h-[60px]" />
+                      </div>
+
+                      {/* 確定ボタン */}
+                      <button
+                        onClick={handleSaveManualToApp}
+                        disabled={isSaving}
+                        className="btn-3d w-full min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg"
+                        style={{ backgroundColor: THEME.colors.mealPrimary, borderColor: THEME.colors.mealPrimary }}
+                      >
+                       {isSaving ? <Loader2 className="animate-spin" /> : <Save size={24} />}
+                       この内容で記録する
+                      </button>
+                    </div>
+                </div>
+            )}
+            
           </div>
         )}
 
@@ -1002,10 +1108,8 @@ const MealView: React.FC<MealViewProps> = ({
         )}
 
 
-
         {step === "result" && analysis && (
           <div className="space-y-6 animate-in zoom-in-95 pb-40">
-            {/* トースト通知 */}
             {toast && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -1067,7 +1171,6 @@ const MealView: React.FC<MealViewProps> = ({
                 </div>
               )}
 
-              {/* 食事区分 (結果画面の最上部に配置) */}
               {!isEditing && (
                 <div
                   className="bg-white p-1.5 rounded-[24px] border-2 flex justify-between gap-1 shadow-sm"
@@ -1094,9 +1197,7 @@ const MealView: React.FC<MealViewProps> = ({
                 </div>
               )}
 
-              {/* 結果表示セクション */}
               {isEditing && (
-                /* 編集セクション */
                 <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300">
                   <div className="flex justify-between items-center px-1">
                     <h4 className="text-xs font-black text-stone-400 uppercase tracking-widest">編集モード</h4>
@@ -1106,7 +1207,6 @@ const MealView: React.FC<MealViewProps> = ({
                   </div>
 
                   <div className="space-y-3">
-                    {/* カロリー入力 */}
                     {analysis.category === "food" && (
                       <div 
                         className="bg-white p-4 rounded-[28px] border-2 shadow-sm transition-all focus-within:border-stone-300 relative overflow-hidden" 
@@ -1138,7 +1238,6 @@ const MealView: React.FC<MealViewProps> = ({
                       </div>
                     )}
 
-                    {/* 品名入力 */}
                     <div 
                       className="bg-white p-5 rounded-[28px] border-2 shadow-sm transition-all focus-within:border-stone-300" 
                       style={{ borderColor: THEME.colors.border }}
@@ -1155,7 +1254,6 @@ const MealView: React.FC<MealViewProps> = ({
                       />
                     </div>
 
-                    {/* ひとこと入力 */}
                     <div 
                       className="bg-white p-5 rounded-[28px] border-2 shadow-sm transition-all focus-within:border-stone-300" 
                       style={{ borderColor: THEME.colors.border }}
@@ -1171,7 +1269,6 @@ const MealView: React.FC<MealViewProps> = ({
                       />
                     </div>
 
-                    {/* メモ入力 */}
                     <div 
                       className="bg-white p-4 rounded-[24px] border-2 shadow-sm transition-all focus-within:border-stone-300" 
                       style={{ borderColor: THEME.colors.border }}
@@ -1197,50 +1294,65 @@ const MealView: React.FC<MealViewProps> = ({
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* 下部アクションエリア (解析直後) */}
-            {!isEditing && (
-              <div className="px-6 space-y-4 pt-4">
-                <button
-                  onClick={handleSaveToApp}
-                  disabled={isSaving || hasSaved || !!(image && !previewBlob)}
-                  className="btn-3d w-full min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg"
-                  style={{ backgroundColor: THEME.colors.mealPrimary, borderColor: THEME.colors.mealPrimary }}
-                >
-                  {isSaving ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <Save size={24} />
-                  )}
-                  {isSaving ? "保存中..." : "この内容で記録する"}
-                </button>
+              {!isEditing && (
+                <div className="px-6 space-y-4 pt-4">
+                  <button
+                    onClick={handleSaveToApp}
+                    disabled={isSaving || hasSaved || !!(image && !previewBlob)}
+                    className="btn-3d w-full min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg"
+                    style={{ backgroundColor: THEME.colors.mealPrimary, borderColor: THEME.colors.mealPrimary }}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Save size={24} />
+                    )}
+                    {isSaving ? "保存中..." : "この内容で記録する"}
+                  </button>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleRetake}
-                    className="btn-3d w-full min-h-[56px] h-auto py-2 text-sm font-black rounded-[24px] transition-all flex items-center justify-center gap-2 border-2 bg-stone-50 text-stone-400"
-                    style={{ borderColor: THEME.colors.border }}
-                  >
-                    <RotateCcw size={18} />
-                    やりなおす
-                  </button>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="btn-3d w-full min-h-[56px] h-auto py-2 text-sm font-black rounded-[24px] transition-all flex items-center justify-center gap-2 border-2 bg-white"
-                    style={{ borderColor: THEME.colors.mealPrimary, color: THEME.colors.mealPrimary }}
-                  >
-                    <Edit2 size={18} />
-                    編集する
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleRetake}
+                      className="btn-3d w-full min-h-[56px] h-auto py-2 text-sm font-black rounded-[24px] transition-all flex items-center justify-center gap-2 border-2 bg-stone-50 text-stone-400"
+                      style={{ borderColor: THEME.colors.border }}
+                    >
+                      <RotateCcw size={18} />
+                      やりなおす
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="btn-3d w-full min-h-[56px] h-auto py-2 text-sm font-black rounded-[24px] transition-all flex items-center justify-center gap-2 border-2 bg-white"
+                      style={{ borderColor: THEME.colors.mealPrimary, color: THEME.colors.mealPrimary }}
+                    >
+                      <Edit2 size={18} />
+                      編集する
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
         {step === "completed" && (
           <div className="space-y-8 animate-in zoom-in-95 pb-40 px-6">
+            {showRecordGuide && (
+              <div className="fixed inset-0 z-[120] bg-black/40 flex items-center justify-center p-6" onClick={() => {
+                  setShowRecordGuide(false);
+                  setOnboardingFlags({ hasSeenFirstRecordGuide: true });
+              }}>
+                  <div className="bg-white p-6 rounded-3xl shadow-2xl animate-in fade-in zoom-in border-4 border-stone-200 w-full max-w-sm">
+                      <h3 className="font-black text-lg mb-2 text-stone-700">記録できました！</h3>
+                      <p className="text-sm text-stone-600 mb-4">今日の合計に反映されました。<br/>ホームで見返せます。</p>
+                      <Button onClick={(e) => {
+                          e.stopPropagation();
+                          setShowRecordGuide(false);
+                          setOnboardingFlags({ hasSeenFirstRecordGuide: true });
+                      }} className="w-full">わかった！</Button>
+                  </div>
+              </div>
+            )}
             <div className="flex flex-col items-center justify-center space-y-4 pt-8">
               <div 
                 className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg"
@@ -1254,6 +1366,21 @@ const MealView: React.FC<MealViewProps> = ({
               </div>
             </div>
 
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-stone-200 mt-4 mx-6">
+                <h4 className="font-black text-stone-700 mb-2">今日の記録はこんなかんじ✨</h4>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-stone-50 p-3 rounded-xl">
+                         <p className="text-[10px] font-bold text-stone-400">今のBMI</p>
+                         <p className="text-lg font-black text-stone-700">{calculateBMI(user.height, todayRecord.weight || 0) || "--"}</p>
+                    </div>
+                    <div className="bg-stone-50 p-3 rounded-xl">
+                         <p className="text-[10px] font-bold text-stone-400">目標まで</p>
+                         <p className="text-lg font-black text-primary">{(todayRecord.weight && user.targetWeight) ? (todayRecord.weight - user.targetWeight).toFixed(1) : "--"}kg</p>
+                    </div>
+                </div>
+                <p className="text-[10px] text-stone-400 mt-4 text-center">※記録を続けるとホームでグラフが見れます</p>
+            </div>
+
             {image && previewUrl && (
               <div className="relative w-full max-w-[280px] mx-auto aspect-[3/4] shadow-xl rounded-[24px] overflow-hidden border-2 border-[#E5DDD0]">
                 <img src={previewUrl} className="w-full h-full object-contain" alt="Saved Meal" />
@@ -1263,7 +1390,7 @@ const MealView: React.FC<MealViewProps> = ({
             <div className="space-y-3">
               <button
                 onClick={handleDirectShare}
-                disabled={isSharing || !previewBlob || !image}
+                disabled={isSharing || !!(image && !previewBlob)}
                 className="btn-3d w-full min-h-[64px] h-auto py-2 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg"
                 style={{ backgroundColor: THEME.colors.readPrimary, borderColor: THEME.colors.readPrimary }}
               >

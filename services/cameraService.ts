@@ -18,56 +18,88 @@ const COMPRESS_QUALITY = 0.5;
 /**
  * 共通前処理関数: Blob または File を受け取り、リサイズ・圧縮して Base64 を返す
  */
-export const processBlobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(blob);
-    
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      let width = img.width;
-      let height = img.height;
+/**
+ * 共通前処理関数: Blob または File を受け取り、リサイズ・圧縮して Base64 を返す
+ */
+export const processBlobToBase64 = async (blob: Blob): Promise<string> => {
+    let imageBitmap: ImageBitmap | null = null;
+    let url: string | null = null;
 
-      if (width > height) {
+    // Strategy 1: createImageBitmap
+    try {
+        console.log("processBlobToBase64: Trying Strategy 1: createImageBitmap");
+        imageBitmap = await createImageBitmap(blob);
+    } catch (e1) {
+        console.warn("processBlobToBase64: Strategy 1 failed", e1);
+
+        // Strategy 2: URL.createObjectURL + Image.decode()
+        try {
+            console.log("processBlobToBase64: Trying Strategy 2: ObjectURL + Image");
+            url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.src = url;
+            await img.decode();
+            imageBitmap = await createImageBitmap(img);
+        } catch (e2) {
+            console.warn("processBlobToBase64: Strategy 2 failed", e2);
+
+            // Strategy 3: FileReader + DataURL + Image
+            try {
+                console.log("processBlobToBase64: Trying Strategy 3: FileReader + DataURL");
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+
+                const img = new Image();
+                img.src = dataUrl;
+                await img.decode();
+                imageBitmap = await createImageBitmap(img);
+            } catch (e3) {
+                console.error("processBlobToBase64: All strategies failed", e3);
+                throw new Error("画像の読み込みに失敗しました。撮り直しや別の写真をお試しください。");
+            }
+        } finally {
+            if (url) URL.revokeObjectURL(url);
+        }
+    }
+
+    if (!imageBitmap) throw new Error("画像デコードに失敗しました。");
+
+    // リサイズ処理 (共有化)
+    let width = imageBitmap.width;
+    let height = imageBitmap.height;
+
+    // リサイズ計算
+    if (width > height) {
         if (width > MAX_LONG_SIDE) {
-          height = Math.round((height * MAX_LONG_SIDE) / width);
-          width = MAX_LONG_SIDE;
+            height = Math.round((height * MAX_LONG_SIDE) / width);
+            width = MAX_LONG_SIDE;
         }
-      } else {
+    } else {
         if (height > MAX_LONG_SIDE) {
-          width = Math.round((width * MAX_LONG_SIDE) / height);
-          height = MAX_LONG_SIDE;
+            width = Math.round((width * MAX_LONG_SIDE) / height);
+            height = MAX_LONG_SIDE;
         }
-      }
+    }
 
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d', { alpha: false });
-      if (!ctx) {
-        reject(new Error("Canvas context creation failed"));
-        return;
-      }
-      
-      try {
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
-        const base64 = dataUrl.split(',')[1];
-        canvas.width = 0;
-        canvas.height = 0;
-        resolve(base64);
-      } catch (e) {
-        reject(e);
-      }
-    };
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
     
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("Failed to load image from blob"));
-    };
-    
-    img.src = objectUrl;
-  });
+    if (!ctx) {
+        imageBitmap.close();
+        throw new Error("Canvas context creation failed");
+    }
+
+    ctx.drawImage(imageBitmap, 0, 0, width, height);
+    imageBitmap.close(); // メモリ解放
+
+    const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY);
+    return dataUrl.split(',')[1];
 };
 
 export const processPhotoResultToBase64 = async (result: PhotoResult): Promise<string> => {
@@ -114,12 +146,22 @@ export const takePhoto = async (source: CameraSource = CameraSource.Prompt, dire
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
+      input.style.display = 'none'; // 表示させない
+      
       if (source === CameraSource.Camera) {
           input.capture = direction === 'rear' ? 'environment' : 'user';
       }
 
+      const cleanup = () => {
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+      };
+
       input.onchange = async (e: any) => {
         const file = e.target.files?.[0];
+        cleanup();
+        
         if (!file) {
           reject(new Error("CANCELLED"));
           return;
@@ -136,18 +178,16 @@ export const takePhoto = async (source: CameraSource = CameraSource.Prompt, dire
         });
       };
 
-      input.onerror = () => reject(new Error("File input error"));
+      input.onerror = () => {
+        cleanup();
+        reject(new Error("File input error"));
+      };
       
-      // キャンセル検知（一部のブラウザでは難しいが、フォーカス戻りで判定する等）
-      window.addEventListener('focus', () => {
-        setTimeout(() => {
-          if (!input.value) {
-            // reject(new Error("CANCELLED")); // 厳密にやると誤爆するので、今回は明示的なエラーに任せる
-          }
-        }, 1000);
-      }, { once: true });
-
+      document.body.appendChild(input);
       input.click();
+      
+      // ユーザーがキャンセルする場合を想定し、フォーカス戻りで後始末
+      window.addEventListener('focus', () => { setTimeout(cleanup, 500); }, { once: true });
     });
   }
 };

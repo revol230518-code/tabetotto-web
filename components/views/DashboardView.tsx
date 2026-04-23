@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { UserProfile, DailyRecord, AppView } from "../../types";
 import { calculateBMI, calculateCalorieTarget } from "../../utils";
 import { THEME } from "../../theme";
+import { getOnboardingFlags, setOnboardingFlags } from "../../services/onboardingService";
+import { Button } from "../UIComponents";
 import {
   determineMascotState,
   getRandomTapMessage,
@@ -94,6 +96,15 @@ const DashboardView: React.FC<DashboardProps> = ({
   openKeypad,
 }) => {
   const bmi = calculateBMI(user.height, todayRecord.weight || 0);
+
+  const [showHomeGuide, setShowHomeGuide] = React.useState(false);
+
+  React.useEffect(() => {
+    const flags = getOnboardingFlags();
+    if (flags.hasCompletedInitialSetup && !flags.hasSeenHomeGuide) {
+      setShowHomeGuide(true);
+    }
+  }, []);
 
   // タップ時の一時メッセージ
   const [tapMessage, setTapMessage] = React.useState<string | null>(null);
@@ -636,6 +647,22 @@ const DashboardView: React.FC<DashboardProps> = ({
           </motion.div>
         </div>
       </main>
+      {showHomeGuide && (
+         <div className="fixed inset-0 z-[120] bg-black/40 flex items-center justify-center p-6" onClick={() => {
+             setShowHomeGuide(false);
+             setOnboardingFlags({ hasSeenHomeGuide: true });
+         }}>
+             <div className="bg-white p-6 rounded-3xl shadow-2xl animate-in fade-in zoom-in border-4 border-stone-200 w-full max-w-sm">
+                 <h3 className="font-black text-lg mb-2 text-stone-700">たべとっと。へようこそ！</h3>
+                 <p className="text-sm text-stone-600 mb-4">ここに体重やBMIが表示されます。<br/>ここからごはん記録ができます。</p>
+                 <Button onClick={(e) => {
+                     e.stopPropagation();
+                     setShowHomeGuide(false);
+                     setOnboardingFlags({ hasSeenHomeGuide: true });
+                 }} className="w-full">記録してみる</Button>
+             </div>
+         </div>
+      )}
     </div>
   );
 };

@@ -11,6 +11,14 @@ const container = document.getElementById('root');
 initPWA();
 
 const renderError = (el: HTMLElement, error: any) => {
+  // 自動リロードが必要な ChunkLoadError 系か判定
+  const isChunkError = error?.message?.match(/loading chunk|importing a module script failed|ChunkLoadError/i);
+  if (isChunkError && !sessionStorage.getItem('tabetotto_chunk_reload_once')) {
+      sessionStorage.setItem('tabetotto_chunk_reload_once', '1');
+      window.location.reload();
+      return;
+  }
+
   console.error("Critical Start Error:", error);
   el.innerHTML = `
     <div style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px; text-align:center; background:#fdfbf7; font-family:sans-serif;">
