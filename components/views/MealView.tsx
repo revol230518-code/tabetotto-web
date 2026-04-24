@@ -206,6 +206,8 @@ const MealView: React.FC<MealViewProps> = ({
 
   const [image, setImage] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<MealAnalysis | null>(null);
+  const [isResultReady, setIsResultReady] = useState(false);
+  const [isGeneratingResultImage, setIsGeneratingResultImage] = useState(false);
 
   // 編集用のState
   const [editedMenuName, setEditedMenuName] = useState("");
@@ -267,7 +269,7 @@ const MealView: React.FC<MealViewProps> = ({
           NUTRITION_TRIVIA[Math.floor(Math.random() * NUTRITION_TRIVIA.length)]
         );
       }, 3000);
-    } else if (step === "preparing") {
+    } else if (step === "preparing" || isGeneratingResultImage) {
       setTriviaMessage("画像をととのえ中...✨");
       setMascotAnimation("animate-float");
     } else {
@@ -276,7 +278,7 @@ const MealView: React.FC<MealViewProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [step]);
+  }, [step, isGeneratingResultImage]);
 
   // 復帰時の処理
   useEffect(() => {
@@ -350,7 +352,7 @@ const MealView: React.FC<MealViewProps> = ({
     // メニューが閉じている時だけ制御する
     if (isMenuOpen) return;
 
-    if (step === "analyze" || step === "preparing" || step === "ad_wait") {
+    if (step === "analyze" || step === "preparing" || step === "ad_wait" || isGeneratingResultImage) {
       // 解析中・待機中は全広告禁止
       hideAdsForCamera();
     } else if (step === "result" || step === "manual") {
@@ -362,7 +364,7 @@ const MealView: React.FC<MealViewProps> = ({
       hideBanner();
       showMrec();
     }
-  }, [step, isMenuOpen]);
+  }, [step, isMenuOpen, isGeneratingResultImage]);
 
   const handleImageProcess = async (base64: string, skipSetup: boolean = false) => {
     if (!skipSetup) {
@@ -378,6 +380,7 @@ const MealView: React.FC<MealViewProps> = ({
     setImage(base64);
 
     try {
+      setTriviaMessage("食事を解析中...👀");
       const result = await analyzeMeal(base64);
       setAnalysis(result);
       setEditedMenuName(result.menuName);
@@ -392,6 +395,28 @@ const MealView: React.FC<MealViewProps> = ({
         comment: result.comment,
         memo: "",
       });
+
+      // 【直列化】結果画面に進む前に、初期カード画像を生成する
+      setIsGeneratingResultImage(true);
+      setTriviaMessage("結果カードを作成中...✨");
+      const initialAnalysis: MealAnalysis = {
+        ...result,
+        mealType: mealTypeRef.current,
+      };
+      
+      try {
+        const blob = await renderMealResultToBlob(base64, initialAnalysis, recordDate);
+        setPreviewBlob(blob);
+        setIsResultReady(true);
+      } catch (genError) {
+        console.error("Initial image generation failed", genError);
+        // 画像生成に失敗しても結果画面には進ませる（軽量記録は可能なため）
+        showToast("画像の生成に失敗しました。記録の保存は可能です。");
+        setPreviewBlob(null);
+        setIsResultReady(true);
+      } finally {
+        setIsGeneratingResultImage(false);
+      }
       
       setStep("result");
     } catch (e: any) {
@@ -412,6 +437,7 @@ const MealView: React.FC<MealViewProps> = ({
       setStep("intro");
     } finally {
       clearPendingCapture();
+      setIsGeneratingResultImage(false);
     }
   };
 
@@ -490,17 +516,25 @@ const MealView: React.FC<MealViewProps> = ({
     if (analysis.category !== "blocked" && !debouncedPreviewData.menuName) return;
 
     const updatePreview = async () => {
-      // デバウンスされたデータを使用して解析オブジェクトを作成
-      const current: MealAnalysis = {
-        ...analysis,
-        menuName: debouncedPreviewData.menuName,
-        numericCalories: debouncedPreviewData.calories,
-        comment: debouncedPreviewData.comment,
-        memo: debouncedPreviewData.memo,
-        mealType: mealTypeRef.current,
-      };
-      const blob = await renderMealResultToBlob(image, current, recordDate);
-      setPreviewBlob(blob);
+      setIsGeneratingResultImage(true);
+      try {
+        // デバウンスされたデータを使用して解析オブジェクトを作成
+        const current: MealAnalysis = {
+          ...analysis,
+          menuName: debouncedPreviewData.menuName,
+          numericCalories: debouncedPreviewData.calories,
+          comment: debouncedPreviewData.comment,
+          memo: debouncedPreviewData.memo,
+          mealType: mealTypeRef.current,
+        };
+        const blob = await renderMealResultToBlob(image, current, recordDate);
+        setPreviewBlob(blob);
+        setIsResultReady(true);
+      } catch (e) {
+        console.error("Preview update error:", e);
+      } finally {
+        setIsGeneratingResultImage(false);
+      }
     };
     updatePreview();
   }, [
@@ -585,83 +619,84 @@ const MealView: React.FC<MealViewProps> = ({
 
   const performSave = async (): Promise<boolean> => {
     if (!analysis || isSaving || hasSaved) return hasSaved;
-    // 画像がある場合はプレビュー生成を待つ
-    if (image && !previewBlob) {
-      alert("画像の準備中です。少々お待ちください。");
-      return false;
-    }
 
     setIsSaving(true);
     try {
       let fileUri = "";
 
-      // 画像がある場合のみ、画像生成・保存処理を行う
+      // 1. 画像保存の試行 (オプション)
+      // iPhone WEB版や一部環境では失敗することがあるため、記録保存とは分離してトライする
       if (image && previewBlob) {
-        const blob = previewBlob;
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve) => {
-          reader.onloadend = () => {
-            const base64String = reader.result as string;
-            resolve(base64String.split(",")[1]);
-          };
-          reader.readAsDataURL(blob);
-        });
-        const base64data = await base64Promise;
-        const fileName = `tabetotto_${recordDate.replace(/-/g, "")}_${Date.now()}.jpg`;
+        try {
+          const blob = previewBlob;
+          const reader = new FileReader();
+          const base64Promise = new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => {
+              const base64String = reader.result as string;
+              resolve(base64String.split(",")[1]);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          const base64data = await base64Promise;
+          const fileName = `tabetotto_${recordDate.replace(/-/g, "")}_${Date.now()}.jpg`;
 
-        let gallerySaved = false;
-        if (Capacitor.getPlatform() === "android") {
-          try {
-            const res = await GallerySaver.saveImage({
-              base64: base64data,
-              fileName: fileName,
-              album: "たべとっと。",
-            });
-            if (res.saved) {
-              gallerySaved = true;
+          let gallerySaved = false;
+          // Androidネイティブのみギャラリー保存を試みる
+          if (Capacitor.getPlatform() === "android" && Capacitor.isNativePlatform()) {
+            try {
+              const res = await GallerySaver.saveImage({
+                base64: base64data,
+                fileName: fileName,
+                album: "たべとっと。",
+              });
+              if (res.saved) {
+                gallerySaved = true;
+                console.log("Gallery save success");
+              }
+            } catch (e) {
+              console.warn("Gallery save failed (non-fatal):", e);
             }
-          } catch (e) {
-            console.warn("Gallery save failed:", e);
           }
-        }
 
-        if (!gallerySaved) {
+          // 内部ファイルシステムへの保存（ネイティブ共通）
           if (Capacitor.isNativePlatform()) {
             try {
-              await Filesystem.writeFile({
+              const savedFile = await Filesystem.writeFile({
                 path: fileName,
                 data: base64data,
-                directory: Directory.Documents,
+                directory: Directory.Data,
               });
+              fileUri = savedFile.uri;
+              
+              // ドキュメントディレクトリへも念のため（Android以外/フォールバック）
+              if (!gallerySaved) {
+                await Filesystem.writeFile({
+                  path: fileName,
+                  data: base64data,
+                  directory: Directory.Documents,
+                }).catch(() => {});
+              }
             } catch (fsError) {
-              console.error("Device documents save failed", fsError);
+              console.warn("Device internal save failed (non-fatal):", fsError);
             }
-          } else {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileName;
-            a.click();
-            URL.revokeObjectURL(url);
           }
+        } catch (imgInternalError) {
+          console.warn("Image save logic encountered error (non-fatal):", imgInternalError);
         }
-
-        const savedFile = await Filesystem.writeFile({
-          path: fileName,
-          data: base64data,
-          directory: Directory.Data,
-        });
-        fileUri = savedFile.uri;
       }
 
+      // 2. 本体の記録保存 (グラフ反映・履歴用)
+      // 画像保存が失敗して fileUri が空でも、ここが成功すれば成功扱いにする
       onSave(getCurrentAnalysis(), fileUri, recordDate);
       setOnboardingFlags({ hasCompletedFirstMealRecord: true });
       setHasSaved(true);
       showToast("保存しました✨");
       return true;
     } catch (e) {
-      console.error("Save error:", e);
-      alert("保存中にエラーが発生しました");
+      console.error("Critical record save error:", e);
+      // ここまでの処理でエラーが出た場合のみ「保存失敗」アラートを出す
+      alert("記録の保存中にエラーが発生しました。インターネット接続を確認してください。");
       return false;
     } finally {
       setIsSaving(false);
@@ -728,7 +763,11 @@ const MealView: React.FC<MealViewProps> = ({
     }
 
     if (!previewBlob) {
-      alert("画像の準備中です。少々お待ちください。");
+      if (isResultReady && !isGeneratingResultImage) {
+        alert("画像の生成に失敗したため、シェアできません。記録の保存は可能です。");
+      } else {
+        alert("画像の準備中です。少々お待ちください。");
+      }
       return;
     }
 
@@ -787,11 +826,11 @@ const MealView: React.FC<MealViewProps> = ({
       </div>
 
       <main className="mt-2 animate-in slide-in-from-bottom duration-300 relative z-10 pb-[250px]">
-        {(step === "intro" || step === "analyze" || step === "preparing" || step === "manual") && (
+        {(step === "intro" || step === "analyze" || step === "preparing" || step === "manual" || isGeneratingResultImage) && (
           <div className="px-6 flex flex-col items-center space-y-2">
             
             {/* Intro / Manual mascot UI */}
-            {step !== "manual" && (
+            {step !== "manual" && !isGeneratingResultImage && (
                 <div className="flex items-center justify-center relative w-full mb-0">
                   <div className="relative w-full flex justify-start pl-2">
                     {onOpenGuide && step === "intro" && (
@@ -813,7 +852,7 @@ const MealView: React.FC<MealViewProps> = ({
                       ref={mascotRef}
                       whileTap={{ scale: 0.95 }}
                       className={`relative z-10 ${mascotAnimation || "animate-float"}`}
-                      onClick={step === "intro" ? () => { triggerHaptic(); handleMascotTap(); } : undefined}
+                      onClick={step === "intro" && !isGeneratingResultImage ? () => { triggerHaptic(); handleMascotTap(); } : undefined}
                       style={{
                         width: "150px",
                         height: "150px",
@@ -903,7 +942,7 @@ const MealView: React.FC<MealViewProps> = ({
               </>
             )}
 
-            {(step === "analyze" || step === "preparing") && (
+            {(step === "analyze" || step === "preparing" || isGeneratingResultImage) && (
               <div className="flex flex-col items-center justify-center space-y-10 py-10 relative">
                 <div className="absolute inset-0 flex items-center justify-center opacity-[0.12] pointer-events-none">
                   <img src={OFFICIAL_MASCOT_SRC} alt="" className="w-40 h-40 object-contain animate-pulse" />
@@ -916,7 +955,7 @@ const MealView: React.FC<MealViewProps> = ({
                     strokeWidth={3}
                   />
                   <p className="text-sm font-black text-stone-500 relative z-10">
-                    {step === "preparing" ? "画像を準備中..." : "食事を解析中..."}
+                    {isGeneratingResultImage ? "結果カードを作成中..." : step === "preparing" ? "画像を準備中..." : "食事を解析中..."}
                   </p>
                 </div>
               </div>
@@ -1100,7 +1139,7 @@ const MealView: React.FC<MealViewProps> = ({
               )}
               {image && (
                 <div className="relative w-full aspect-[3/4] shadow-2xl rounded-[32px] overflow-hidden border-2 border-[#E5DDD0] bg-[#FFFDF5]">
-                  {previewUrl ? (
+                  {previewUrl && !isGeneratingResultImage ? (
                     <img
                       src={previewUrl}
                       className="w-full h-full object-contain"
@@ -1113,7 +1152,7 @@ const MealView: React.FC<MealViewProps> = ({
                         style={{ color: THEME.colors.mealPrimary }}
                       />
                       <span className="text-xs font-bold text-stone-400">
-                        カード生成中...
+                        {isGeneratingResultImage ? "カード更新中..." : "カード生成中..."}
                       </span>
                     </div>
                   )}
@@ -1249,25 +1288,25 @@ const MealView: React.FC<MealViewProps> = ({
                   <div className="grid grid-cols-5 gap-3">
                     <button
                       onClick={handleSaveToApp}
-                      disabled={isSaving || hasSaved || !!(image && !previewBlob)}
-                      className="btn-3d col-span-4 min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg disabled:opacity-50 disabled:grayscale"
+                      disabled={isSaving || hasSaved || !isResultReady || isGeneratingResultImage}
+                      className="btn-3d col-span-4 min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg disabled:opacity-50 disabled:grayscale transition-opacity"
                       style={{ backgroundColor: THEME.colors.mealPrimary, borderColor: THEME.colors.mealPrimary }}
                     >
-                      {isSaving ? (
+                      {isSaving || !isResultReady || isGeneratingResultImage ? (
                         <Loader2 className="animate-spin" />
                       ) : (
                         <Check size={24} />
                       )}
-                      {isSaving ? "保存中..." : hasSaved ? "保存済み" : "この内容で記録する"}
+                      {!isResultReady || isGeneratingResultImage ? "カード準備中..." : isSaving ? "保存中..." : hasSaved ? "保存済み" : "この内容で記録する"}
                     </button>
 
                     <button
                       onClick={handleDirectShare}
-                      disabled={isSharing || !!(image && !previewBlob)}
-                      className="btn-3d col-span-1 min-h-[64px] h-auto py-3 rounded-[24px] transition-all flex items-center justify-center shadow-md bg-white border-2"
+                      disabled={isSharing || !isResultReady || isGeneratingResultImage}
+                      className="btn-3d col-span-1 min-h-[64px] h-auto py-3 rounded-[24px] transition-all flex items-center justify-center shadow-md bg-white border-2 disabled:opacity-50 disabled:grayscale transition-opacity"
                       style={{ borderColor: THEME.colors.readPrimary, color: THEME.colors.readPrimary }}
                     >
-                      {isSharing ? (
+                      {isSharing || !isResultReady || isGeneratingResultImage ? (
                         <Loader2 className="animate-spin w-5 h-5" />
                       ) : (
                         <Share2 size={24} />
@@ -1354,16 +1393,16 @@ const MealView: React.FC<MealViewProps> = ({
             <div className="space-y-3">
               <button
                 onClick={handleDirectShare}
-                disabled={isSharing || !!(image && !previewBlob)}
-                className="btn-3d w-full min-h-[64px] h-auto py-2 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg"
+                disabled={isSharing || !isResultReady || isGeneratingResultImage}
+                className="btn-3d w-full min-h-[64px] h-auto py-2 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg disabled:opacity-50 disabled:grayscale"
                 style={{ backgroundColor: THEME.colors.readPrimary, borderColor: THEME.colors.readPrimary }}
               >
-                {isSharing ? (
+                {isSharing || !isResultReady || isGeneratingResultImage ? (
                   <Loader2 className="animate-spin" />
                 ) : (
                   <Share2 size={24} />
                 )}
-                {isSharing ? "共有準備中..." : "シェアする"}
+                {!isResultReady || isGeneratingResultImage ? "カード準備中..." : isSharing ? "共有準備中..." : "シェアする"}
               </button>
 
               <div className="bg-stone-50 p-3 rounded-xl border border-dashed border-stone-200 flex items-center gap-2 justify-center">
