@@ -99,5 +99,7 @@ export enum AppView {
   FAQ = 'FAQ',
   PRIVACY = 'PRIVACY',
   TERMS = 'TERMS',
-  INFO = 'INFO'
+  INFO = 'INFO',
+  OWNER = 'OWNER',
+  ARTICLES = 'ARTICLES'
 }

@@ -41,6 +41,7 @@ import {
 } from "../../utils";
 import { showMrec, showBanner } from "../../services/admobService";
 import { generateWeeklyReport } from "../../services/weeklyReport";
+import { Capacitor } from "@capacitor/core";
 
 import { motion } from 'motion/react';
 import { triggerHaptic } from '../../services/haptics';
@@ -1012,7 +1013,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
           {/* Sentinel for MREC triggering & MREC space reservation */}
           <div
             ref={bottomSentinelRef}
-            style={{ height: "300px", width: "100%" }}
+            style={{ height: Capacitor.isNativePlatform() ? "300px" : "0px", width: "100%" }}
           />
         </div>
       </main>

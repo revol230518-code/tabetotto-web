@@ -732,12 +732,6 @@ const MealView: React.FC<MealViewProps> = ({
       return;
     }
 
-    // 未保存なら自動保存
-    if (!hasSaved) {
-      const saved = await performSave();
-      if (!saved) return; // 保存失敗時は中断
-    }
-
     setIsSharing(true);
     
     try {
@@ -750,26 +744,19 @@ const MealView: React.FC<MealViewProps> = ({
       });
 
       if (result === 'success') {
-          // Success
-      } else if (result === 'fallback') {
-          // Fallback UI or Modal
+          // Success - hasSaved は変更しない
+      } else if (result === 'fallback' || result === 'error') {
+          // フォールバック案内に任せる
           if (onShareRequest) {
             onShareRequest(blob);
           } else {
-            // 最悪のフォールバック
-            alert("シェア機能が利用できません。画像を長押しして保存してください。");
-          }
-      } else if (result === 'error') {
-          if (onShareRequest) {
-            onShareRequest(blob);
-          } else {
-            alert("シェアに失敗しました");
+            alert("シェアに失敗しました。画像を長押しして保存してください。");
           }
       }
     } catch (e: any) {
       if (e.name !== 'AbortError') {
         console.error("share:fail", e);
-        if (onShareRequest) onShareRequest(previewBlob);
+        if (onShareRequest && previewBlob) onShareRequest(previewBlob);
       }
     } finally {
       setIsSharing(false);
@@ -1038,21 +1025,32 @@ const MealView: React.FC<MealViewProps> = ({
                   <h3 className="text-xl font-black">記録回数がゼロです</h3>
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-stone-600">
-                      2時間待つと1回分回復（最大2回まで）
+                      2時間待つと1回分回復します
                     </p>
-                    <p className="text-xs font-bold text-stone-600">
-                      広告を見ると4回分まとめて回復（最大4回）
-                    </p>
+                    {Capacitor.isNativePlatform() && (
+                      <p className="text-xs font-bold text-stone-600">
+                        広告を見ると4回分まとめて回復（最大4回）
+                      </p>
+                    )}
                   </div>
                 </div>
-                <Button
-                  onClick={handleRestore}
-                  variant="primary"
-                  className="w-full min-h-[56px] h-auto py-3 shadow-lg font-black rounded-2xl"
-                >
-                  <PlayCircle size={20} className="mr-2 shrink-0" />{" "}
-                  広告を見て回復
-                </Button>
+                {Capacitor.isNativePlatform() ? (
+                  <Button
+                    onClick={handleRestore}
+                    variant="primary"
+                    className="w-full min-h-[56px] h-auto py-3 shadow-lg font-black rounded-2xl"
+                  >
+                    <PlayCircle size={20} className="mr-2 shrink-0" />{" "}
+                    広告を見て回復
+                  </Button>
+                ) : (
+                  <div className="bg-stone-50 p-4 rounded-2xl border-2 border-dashed border-stone-200">
+                    <p className="text-xs font-bold text-stone-400">
+                      WEB版では時間経過による回復のみとなっております。
+                      しばらくお時間をおいてから再度お越しください✨
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1248,19 +1246,34 @@ const MealView: React.FC<MealViewProps> = ({
 
               {!isEditing && (
                 <div className="px-6 space-y-4 pt-4">
-                  <button
-                    onClick={handleSaveToApp}
-                    disabled={isSaving || hasSaved || !!(image && !previewBlob)}
-                    className="btn-3d w-full min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg"
-                    style={{ backgroundColor: THEME.colors.mealPrimary, borderColor: THEME.colors.mealPrimary }}
-                  >
-                    {isSaving ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Save size={24} />
-                    )}
-                    {isSaving ? "保存中..." : "この内容で記録する"}
-                  </button>
+                  <div className="grid grid-cols-5 gap-3">
+                    <button
+                      onClick={handleSaveToApp}
+                      disabled={isSaving || hasSaved || !!(image && !previewBlob)}
+                      className="btn-3d col-span-4 min-h-[64px] h-auto py-3 text-lg font-black rounded-[28px] transition-all flex items-center justify-center gap-3 text-white shadow-lg disabled:opacity-50 disabled:grayscale"
+                      style={{ backgroundColor: THEME.colors.mealPrimary, borderColor: THEME.colors.mealPrimary }}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <Check size={24} />
+                      )}
+                      {isSaving ? "保存中..." : hasSaved ? "保存済み" : "この内容で記録する"}
+                    </button>
+
+                    <button
+                      onClick={handleDirectShare}
+                      disabled={isSharing || !!(image && !previewBlob)}
+                      className="btn-3d col-span-1 min-h-[64px] h-auto py-3 rounded-[24px] transition-all flex items-center justify-center shadow-md bg-white border-2"
+                      style={{ borderColor: THEME.colors.readPrimary, color: THEME.colors.readPrimary }}
+                    >
+                      {isSharing ? (
+                        <Loader2 className="animate-spin w-5 h-5" />
+                      ) : (
+                        <Share2 size={24} />
+                      )}
+                    </button>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -1350,7 +1363,7 @@ const MealView: React.FC<MealViewProps> = ({
                 ) : (
                   <Share2 size={24} />
                 )}
-                {isSharing ? "作成中..." : "シェアする"}
+                {isSharing ? "共有準備中..." : "シェアする"}
               </button>
 
               <div className="bg-stone-50 p-3 rounded-xl border border-dashed border-stone-200 flex items-center gap-2 justify-center">

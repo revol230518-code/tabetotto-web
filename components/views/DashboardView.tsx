@@ -1,4 +1,4 @@
-import { PenTool, Utensils, Calendar } from "lucide-react";
+import { PenTool, Utensils, Calendar, BookOpen } from "lucide-react";
 import React from "react";
 import { createPortal } from "react-dom";
 import { UserProfile, DailyRecord, AppView } from "../../types";
@@ -644,6 +644,33 @@ const DashboardView: React.FC<DashboardProps> = ({
                 レポートを詳しくみる
               </span>
             </button>
+          </motion.div>
+
+          {/* 読みものセクションへの誘導 */}
+          <motion.div
+            whileTap={{ scale: 0.99 }}
+            onClick={() => {
+              triggerHaptic(ImpactStyle.Light);
+              setView(AppView.ARTICLES);
+            }}
+            className="p-5 border-2 shadow-sm flex items-center justify-between cursor-pointer relative overflow-hidden"
+            style={{
+              borderRadius: '24px',
+              borderColor: THEME.colors.readBorder,
+              backgroundColor: '#fdfbf7',
+            }}
+          >
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-black text-stone-400 uppercase tracking-wider">Useful Resources</span>
+              <h3 className="text-sm font-black" style={{ color: THEME.colors.textPrimary }}>たべとっと。読みもの一覧</h3>
+              <p className="text-[11px] font-bold text-stone-500">栄養ガイドや使い方など、お役立ち情報をまとめています。</p>
+            </div>
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ backgroundColor: THEME.colors.readSoft, color: THEME.colors.readPrimary }}
+            >
+              <BookOpen size={20} strokeWidth={2.5} />
+            </div>
           </motion.div>
         </div>
       </main>

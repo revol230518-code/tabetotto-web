@@ -637,21 +637,32 @@ const PostureView: React.FC<PostureViewProps> = ({
                   <h3 className="text-xl font-black">チェック回数がゼロです</h3>
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-stone-600">
-                      2時間待つと1回分回復（最大2回まで）
+                      2時間待つと1回分回復します
                     </p>
-                    <p className="text-xs font-bold text-stone-600">
-                      広告を見ると4回分まとめて回復（最大4回）
-                    </p>
+                    {Capacitor.isNativePlatform() && (
+                      <p className="text-xs font-bold text-stone-600">
+                        広告を見ると4回分まとめて回復（最大4回）
+                      </p>
+                    )}
                   </div>
                 </div>
-                <Button
-                  onClick={handleRestore}
-                  variant="primary"
-                  className="w-full min-h-[56px] h-auto py-3 shadow-lg font-black rounded-2xl"
-                >
-                  <PlayCircle size={20} className="mr-2 shrink-0" />{" "}
-                  広告を見て回復
-                </Button>
+                {Capacitor.isNativePlatform() ? (
+                  <Button
+                    onClick={handleRestore}
+                    variant="primary"
+                    className="w-full min-h-[56px] h-auto py-3 shadow-lg font-black rounded-2xl"
+                  >
+                    <PlayCircle size={20} className="mr-2 shrink-0" />{" "}
+                    広告を見て回復
+                  </Button>
+                ) : (
+                  <div className="bg-stone-50 p-4 rounded-2xl border-2 border-dashed border-stone-200">
+                    <p className="text-xs font-bold text-stone-400">
+                      WEB版では時間経過による回復のみとなっております。
+                      しばらくお時間をおいてから再度お越しください✨
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

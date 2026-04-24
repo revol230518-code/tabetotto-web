@@ -180,7 +180,7 @@ export const hideMrec = async () => {
 };
 
 export const showRewardedInterstitialAd = async (): Promise<boolean> => {
-  if (!isNative) return true;
+  if (!isNative) return false;
   
   try {
     await initAdMob(); // Ensure init

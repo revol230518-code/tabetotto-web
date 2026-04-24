@@ -1,13 +1,17 @@
 
 import React from 'react';
-import { ChevronLeft, Info, Shield, HelpCircle, AlertTriangle, BookOpen } from 'lucide-react';
+import { ChevronLeft, Info, Shield, HelpCircle, AlertTriangle, BookOpen, ExternalLink, Globe, Instagram, MessageCircle, MapPin, UserCircle } from 'lucide-react';
 import { AppView } from '../../types';
 import { motion } from 'motion/react';
-import { NativeAdCard } from '../AdComponents';
+import Mascot from '../Mascot';
+import { OPERATOR_INFO, RELUCK_URLS } from '../../constants/urls';
+
+import { Capacitor } from '@capacitor/core';
 
 interface StaticPageViewProps {
   view: AppView;
   onBack: () => void;
+  setView: (view: AppView) => void;
 }
 
 const AndroidApp案内 = () => (
@@ -27,13 +31,151 @@ const AndroidApp案内 = () => (
     </div>
 );
 
-const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
+const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack, setView }) => {
   const renderContent = () => {
     switch (view) {
+      case AppView.OWNER:
+        return (
+          <div className="space-y-8">
+            <header className="space-y-2">
+              <div className="mb-4">
+                <Mascot message="たべとっと。を作っている人のこと。" size={48} />
+              </div>
+              <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
+                <UserCircle size={28} /> {OPERATOR_INFO.APP_NAME} 運営者情報
+              </h2>
+              <p className="text-sm text-stone-600 font-bold leading-relaxed">
+                {OPERATOR_INFO.APP_NAME}の開発・運営に関する情報と、関連する活動のご案内です。
+              </p>
+            </header>
+
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-rose-100 space-y-4">
+              <h3 className="font-black text-rose-500 border-b pb-2">{OPERATOR_INFO.APP_NAME}について</h3>
+              <p className="text-sm text-stone-600 leading-relaxed">
+                {OPERATOR_INFO.APP_NAME}は、{OPERATOR_INFO.OPERATOR_NAME}が運営する、食事や体重をゆるく記録するためのWEBアプリです。<br />
+                日々の食事や体重を見える化し、生活を見直すきっかけづくりを目的としています。
+              </p>
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between items-center text-sm border-b border-stone-50 pb-2">
+                  <span className="text-stone-400 font-bold">サービス名</span>
+                  <span className="font-black text-stone-700">{OPERATOR_INFO.APP_NAME}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-stone-50 pb-2">
+                  <span className="text-stone-400 font-bold">運営名</span>
+                  <span className="font-black text-stone-700">{OPERATOR_INFO.OPERATOR_NAME}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-stone-400 font-bold">お問い合わせ</span>
+                  <a href={`mailto:${OPERATOR_INFO.CONTACT_EMAIL}`} className="font-black text-rose-500">{OPERATOR_INFO.CONTACT_EMAIL}</a>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
+              <h3 className="font-black text-stone-700 border-b pb-2">関連活動</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold rounded">ACTIVITY</span>
+                    <h4 className="font-black text-stone-800">整体ジムRe:luck</h4>
+                </div>
+                <p className="text-xs font-black text-rose-400">身体を整え、動きを覚える</p>
+                <p className="text-sm text-stone-600 leading-relaxed">
+                    関連活動として、長崎県波佐見町で整体ジムRe:luckを運営しています。<br />
+                    整体ジムRe:luckは、「身体を整え、動きを覚える」をコンセプトに、地域の健康づくりや身体づくりをサポートしています。
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h3 className="font-black text-stone-700 px-2 flex items-center gap-2">
+                <ExternalLink size={18} className="text-stone-400" /> 関連リンク
+              </h3>
+              <div className="grid grid-cols-1 gap-3">
+                {RELUCK_URLS.OFFICIAL && (
+                  <a 
+                    href={RELUCK_URLS.OFFICIAL} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-[0.98] transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400">
+                      <Globe size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-stone-700">公式サイトを見る</span>
+                      <span className="text-[10px] text-stone-400 truncate max-w-[180px]">{RELUCK_URLS.OFFICIAL}</span>
+                    </div>
+                    <ChevronLeft size={16} className="ml-auto text-stone-300 rotate-180" />
+                  </a>
+                )}
+                {RELUCK_URLS.INSTAGRAM && (
+                  <a 
+                    href={RELUCK_URLS.INSTAGRAM} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-[0.98] transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-400">
+                      <Instagram size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-stone-700">Instagramを見る</span>
+                      <span className="text-[10px] text-stone-400 truncate max-w-[180px]">@r.evol_re.luck</span>
+                    </div>
+                    <ChevronLeft size={16} className="ml-auto text-stone-300 rotate-180" />
+                  </a>
+                )}
+                {RELUCK_URLS.LINE && (
+                  <a 
+                    href={RELUCK_URLS.LINE} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-[0.98] transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                      <MessageCircle size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-stone-700">公式LINEを見る</span>
+                      <span className="text-[10px] text-stone-400 truncate max-w-[180px]">LINE友だち追加</span>
+                    </div>
+                    <ChevronLeft size={16} className="ml-auto text-stone-300 rotate-180" />
+                  </a>
+                )}
+                {RELUCK_URLS.GOOGLE_MAP && (
+                  <a 
+                    href={RELUCK_URLS.GOOGLE_MAP} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-stone-100 active:scale-[0.98] transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                      <MapPin size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-stone-700">Google Mapで場所を見る</span>
+                      <span className="text-[10px] text-stone-400 truncate max-w-[180px]">長崎県東彼杵郡波佐見町</span>
+                    </div>
+                    <ChevronLeft size={16} className="ml-auto text-stone-300 rotate-180" />
+                  </a>
+                )}
+              </div>
+            </section>
+
+            <div className="bg-stone-50 rounded-2xl p-4 text-center">
+              <p className="text-xs text-stone-500 leading-relaxed font-bold">
+                たべとっと。は地域の健康づくりを応援しています。
+              </p>
+            </div>
+          </div>
+        );
       case AppView.USAGE:
         return (
           <div className="space-y-8">
             <header className="space-y-2">
+              <div className="mb-4">
+                <Mascot message="まずは1枚、写真で残すところから。" size={48} />
+              </div>
               <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
                 <BookOpen size={28} /> たべとっと。の使い方完全ガイド
               </h2>
@@ -82,13 +224,14 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
                 「朝だけ、昼だけ、外食だけでも大丈夫です。まずは記録を付ける習慣を作ることが最優先です。」
                </p>
             </section>
-
-            <NativeAdCard />
           </div>
         );
       case AppView.FAQ:
         return (
           <div className="space-y-6">
+            <div className="mb-4">
+              <Mascot message="迷ったときに、ここで確認。" size={48} />
+            </div>
             <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
               <HelpCircle size={28} /> よくある質問
             </h2>
@@ -124,7 +267,6 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
                   <p className="text-sm text-stone-600 leading-relaxed">A. {item.a}</p>
                 </div>
               ))}
-              <NativeAdCard />
               <AndroidApp案内 />
             </div>
           </div>
@@ -132,6 +274,9 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
       case AppView.PRIVACY:
         return (
           <div className="space-y-6">
+            <div className="mb-4">
+              <Mascot message="安心して使うための大事な案内。" size={48} />
+            </div>
             <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
               <Shield size={28} /> プライバシーポリシー
             </h2>
@@ -160,14 +305,15 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
               <section className="space-y-3 opacity-60 text-center py-4">
                 <p className="text-[10px]">制定日：2024年4月1日<br/>最終更新日：2024年4月22日<br/>運営：R.evo</p>
               </section>
-
-              <NativeAdCard />
             </div>
           </div>
         );
       case AppView.TERMS:
         return (
           <div className="space-y-6">
+            <div className="mb-4">
+              <Mascot message="大事な記録は、画像でも残しておくと安心。" size={48} />
+            </div>
             <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
               <AlertTriangle size={28} /> ご利用上の注意
             </h2>
@@ -203,16 +349,17 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
                   <p>・当アプリの運営を妨げる行為</p>
                 </div>
               </section>
-
-              <NativeAdCard />
             </div>
           </div>
         );
       case AppView.INFO:
         return (
           <div className="space-y-6">
+            <div className="mb-4">
+              <Mascot message="アプリのバージョン情報など。" size={48} />
+            </div>
             <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2">
-              <Info size={28} /> 運営情報
+              <Info size={28} /> アプリ情報
             </h2>
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-5 p-6">
               <div className="space-y-3">
@@ -221,16 +368,8 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
                   <span className="font-black text-stone-700 italic">たべとっと。 (Web版)</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-stone-50 pb-2">
-                  <span className="text-stone-400 text-sm font-bold">運営組織</span>
-                  <span className="font-black text-stone-700">R.evo</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-stone-50 pb-2">
-                  <span className="text-stone-400 text-sm font-bold">責任者</span>
-                  <span className="font-black text-stone-700">たべとっと開発チーム</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-stone-50 pb-2">
-                  <span className="text-stone-400 text-sm font-bold">連絡先</span>
-                  <span className="font-black text-rose-500 text-sm">tabetotto@gmail.com</span>
+                  <span className="text-stone-400 text-sm font-bold">プラットフォーム</span>
+                  <span className="font-black text-stone-700">PWA / Web</span>
                 </div>
                 <div className="flex justify-between items-center pb-2">
                   <span className="text-stone-400 text-sm font-bold">バージョン</span>
@@ -240,8 +379,7 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
 
               <div className="bg-stone-50 rounded-2xl p-4 text-center">
                 <p className="text-xs text-stone-500 leading-relaxed font-bold">
-                  「たべとっと。」は個人の健康をサポートするために活動しています。<br/>
-                  フィードバックや応援のメッセージをお待ちしております。
+                  「たべとっと。」は、皆様の日常をゆるくサポートするために、日々開発と改善を続けています。
                 </p>
               </div>
 
@@ -254,13 +392,56 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
     }
   };
 
+  const StaticFooter = () => {
+    const isAndroid = Capacitor.getPlatform() === 'android';
+    
+    // 静的ページ間で遷移するためのリンク群
+    const navLinks = [
+      { id: AppView.OWNER, label: '運営者情報', icon: UserCircle, webOnly: true },
+      { id: AppView.USAGE, label: '使い方', icon: BookOpen },
+      { id: AppView.FAQ, label: 'よくある質問', icon: HelpCircle },
+      { id: AppView.PRIVACY, label: 'プライバシー', icon: Shield },
+      { id: AppView.TERMS, label: '注意事項', icon: AlertTriangle },
+    ];
+
+    return (
+      <footer className="mt-12 pt-8 border-t border-dashed border-stone-200">
+        <div className="grid grid-cols-2 gap-2">
+          {navLinks.map((link) => {
+            if (link.webOnly && isAndroid) return null;
+            if (view === link.id) return null;
+
+            return (
+              <button
+                key={link.id}
+                onClick={() => {
+                  setView(link.id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="flex items-center gap-2 p-3 rounded-xl bg-stone-50 border border-stone-100 text-stone-500 hover:bg-white active:scale-95 transition-all text-xs font-bold"
+              >
+                <link.icon size={14} />
+                <span>{link.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-8 text-center pb-8">
+           <p className="text-[10px] font-bold text-stone-300 tracking-widest uppercase mb-1">たべとっと。</p>
+           <p className="text-[9px] text-stone-300">© R.evo</p>
+        </div>
+      </footer>
+    );
+  };
+
   const getTitle = () => {
     switch (view) {
       case AppView.USAGE: return "使い方";
       case AppView.FAQ: return "FAQ";
       case AppView.PRIVACY: return "プライバシーポリシー";
       case AppView.TERMS: return "注意事項";
-      case AppView.INFO: return "運営情報";
+      case AppView.INFO: return "アプリ情報";
+      case AppView.OWNER: return "運営者情報";
       default: return "情報";
     }
   };
@@ -283,6 +464,7 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack }) => {
         className="px-6 py-8"
       >
         {renderContent()}
+        <StaticFooter />
       </motion.main>
     </div>
   );

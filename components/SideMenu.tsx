@@ -1,10 +1,11 @@
 import React from 'react';
-import { X, LayoutGrid, Utensils, History, Camera, Settings, BookOpen, Activity, Info, Shield, HelpCircle, AlertTriangle } from 'lucide-react';
+import { X, LayoutGrid, Utensils, History, Camera, Settings, BookOpen, Activity, Info, Shield, HelpCircle, AlertTriangle, UserCircle } from 'lucide-react';
 import { THEME } from '../theme';
 import { AppView } from '../types';
 import { motion } from 'motion/react';
 import { triggerHaptic, ImpactStyle } from '../services/haptics';
 import { scrollToTop } from '../utils/scrollToTop';
+import { Capacitor } from '@capacitor/core';
 
 interface SideMenuProps {
   isOpen: boolean;
@@ -14,10 +15,13 @@ interface SideMenuProps {
 }
 
 const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, currentView, setView }) => {
+  const isAndroid = Capacitor.getPlatform() === 'android';
+
   // メニュー構造：親項目(H2)の下に子項目(H3)を配置できるように拡張
   const menuItems = [
     { id: AppView.DASHBOARD, icon: LayoutGrid, label: 'ホーム' },
     { id: AppView.HISTORY, icon: History, label: '記録・グラフ' },
+    { id: AppView.ARTICLES, icon: BookOpen, label: '読みもの' },
     { 
       id: AppView.MEAL, 
       icon: Utensils, 
@@ -44,7 +48,8 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, currentView, setVi
         { id: AppView.FAQ, icon: HelpCircle, label: 'よくある質問' },
         { id: AppView.PRIVACY, icon: Shield, label: 'プライバシー' },
         { id: AppView.TERMS, icon: AlertTriangle, label: '注意事項' },
-        { id: AppView.INFO, icon: Info, label: '運営情報' },
+        ...(!isAndroid ? [{ id: AppView.OWNER, icon: UserCircle, label: '運営者情報' }] : []),
+        { id: AppView.INFO, icon: Info, label: 'アプリ情報' },
       ]
     },
   ];

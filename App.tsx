@@ -19,6 +19,7 @@ const PosturePointsView = lazy(() => import('./components/views/PosturePointsVie
 const NutritionGuideView = lazy(() => import('./components/views/NutritionGuideView'));
 const MoveGuideView = lazy(() => import('./components/views/MoveGuideView'));
 const StaticPageView = lazy(() => import('./components/views/StaticPageView'));
+const ArticlesView = lazy(() => import('./components/views/ArticlesView'));
 
 import { 
   STORAGE_KEY_USER, 
@@ -38,7 +39,6 @@ import { THEME } from './theme';
 import { App as CapacitorApp } from '@capacitor/app';
 import { setupCameraRecovery, PendingCaptureState, clearPendingCapture } from './services/cameraRecovery';
 import { getPendingShare, clearPendingShare } from './services/shareRecovery';
-import { webAdService } from './services/webAdService';
 
 import { motion } from 'motion/react';
 import { triggerHaptic } from './services/haptics';
@@ -47,6 +47,81 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 const App = () => {
   const [view, setView] = React.useState<AppView>(AppView.DASHBOARD);
+  const [guidePath, setGuidePath] = React.useState<string>('home');
+
+  // URLとViewの同期ロジック
+  const getPathFromView = (v: AppView, sub?: string) => {
+    switch (v) {
+      case AppView.DASHBOARD: return '/';
+      case AppView.HISTORY: return '/history';
+      case AppView.MEAL: return '/meal';
+      case AppView.POSTURE: return '/posture';
+      case AppView.SETTINGS: return '/settings';
+      case AppView.NUTRITION_GUIDE: return sub && sub !== 'home' ? `/guide/${sub}` : '/guide';
+      case AppView.MOVE_GUIDE: return '/move-guide';
+      case AppView.ARTICLES: return '/articles';
+      case AppView.USAGE: return '/usage';
+      case AppView.FAQ: return '/faq';
+      case AppView.PRIVACY: return '/privacy';
+      case AppView.TERMS: return '/terms';
+      case AppView.INFO: return '/info';
+      case AppView.OWNER: return '/owner';
+      case AppView.POSTURE_POINTS: return '/posture-points';
+      default: return '/';
+    }
+  };
+
+  const getViewFromPath = (path: string): { view: AppView, sub?: string } => {
+    if (path === '/' || path === '') return { view: AppView.DASHBOARD };
+    if (path === '/history') return { view: AppView.HISTORY };
+    if (path === '/meal') return { view: AppView.MEAL };
+    if (path === '/posture') return { view: AppView.POSTURE };
+    if (path === '/settings') return { view: AppView.SETTINGS };
+    if (path === '/articles' || path === '/reading') return { view: AppView.ARTICLES };
+    if (path === '/guide') return { view: AppView.NUTRITION_GUIDE, sub: 'home' };
+    if (path.startsWith('/guide/')) return { view: AppView.NUTRITION_GUIDE, sub: path.split('/')[2] };
+    if (path === '/move-guide') return { view: AppView.MOVE_GUIDE };
+    if (path === '/usage') return { view: AppView.USAGE };
+    if (path === '/faq') return { view: AppView.FAQ };
+    if (path === '/privacy') return { view: AppView.PRIVACY };
+    if (path === '/terms') return { view: AppView.TERMS };
+    if (path === '/info') return { view: AppView.INFO };
+    if (path === '/owner') return { view: AppView.OWNER };
+    if (path === '/posture-points') return { view: AppView.POSTURE_POINTS };
+    return { view: AppView.DASHBOARD };
+  };
+
+  const navigateTo = React.useCallback((v: AppView, sub?: string) => {
+    const path = getPathFromView(v, sub);
+    if (window.location.pathname !== path) {
+      window.history.pushState({ view: v, sub }, '', path);
+    }
+    setView(v);
+    if (v === AppView.NUTRITION_GUIDE) {
+      setGuidePath(sub || 'home');
+    }
+    scrollToTop();
+  }, []);
+
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const { view: v, sub } = getViewFromPath(window.location.pathname);
+      setView(v);
+      if (v === AppView.NUTRITION_GUIDE) {
+        setGuidePath(sub || 'home');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    
+    // 初期アクセス時のルーティング
+    const initial = getViewFromPath(window.location.pathname);
+    if (initial.view !== AppView.DASHBOARD) {
+        setView(initial.view);
+        if (initial.sub) setGuidePath(initial.sub);
+    }
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [user, setUser] = React.useState<UserProfile>({ 
     height: 160, 
     targetWeight: 50, 
@@ -606,41 +681,41 @@ const App = () => {
 
     switch (view) {
       case AppView.DASHBOARD:
-        return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={setView} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
+        return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={navigateTo} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
       case AppView.MEAL:
-        return <Suspense fallback={fallback}><MealView user={user} todayRecord={todayRecord} tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handleMealSave} onClose={() => setView(AppView.DASHBOARD)} openKeypad={openKeypad} openCalendar={openCalendar} onOpenGuide={() => setView(AppView.NUTRITION_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} onShareRequest={(blob) => { setPreGeneratedBlob(blob); setShareModalOpen(true); }} /></Suspense>;
+        return <Suspense fallback={fallback}><MealView user={user} todayRecord={todayRecord} tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handleMealSave} onClose={() => navigateTo(AppView.DASHBOARD)} openKeypad={openKeypad} openCalendar={openCalendar} onOpenGuide={() => navigateTo(AppView.NUTRITION_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} onShareRequest={(blob) => { setPreGeneratedBlob(blob); setShareModalOpen(true); }} /></Suspense>;
       case AppView.HISTORY:
         return <Suspense fallback={fallback}><HistoryView records={recordsList} user={user} onMealClick={(m, p, d, i) => { setPreGeneratedBlob(null); setSelectedMeal({ analysis: m, photo: p, date: d, index: i }); }} onPostureClick={(r) => { setShowingPostureDate(r.date); setIsPostureModalOpen(true); }} isMenuOpen={isMenuOpen} /></Suspense>;
       case AppView.POSTURE:
-        return <Suspense fallback={fallback}><PostureView tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handlePostureSave} onClose={() => setView(AppView.DASHBOARD)} openCalendar={openCalendar} onCompare={() => { setComparingDate(getTodayString()); setIsCompareModalOpen(true); }} onOpenMoveGuide={() => setView(AppView.MOVE_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} /></Suspense>;
+        return <Suspense fallback={fallback}><PostureView tokens={tokens} useToken={useToken} restoreTokens={restoreTokens} onSave={handlePostureSave} onClose={() => navigateTo(AppView.DASHBOARD)} openCalendar={openCalendar} onCompare={() => { setComparingDate(getTodayString()); setIsCompareModalOpen(true); }} onOpenMoveGuide={() => navigateTo(AppView.MOVE_GUIDE)} isMenuOpen={isMenuOpen} restoredCapture={restoredCapture} clearRestoredCapture={() => setRestoredCapture(null)} /></Suspense>;
       case AppView.SETTINGS:
-        return <Suspense fallback={fallback}><SettingsView user={user} onSave={setUser} openKeypad={openKeypad} setView={setView} /></Suspense>;
+        return <Suspense fallback={fallback}><SettingsView user={user} onSave={setUser} openKeypad={openKeypad} setView={navigateTo} /></Suspense>;
       case AppView.POSTURE_POINTS:
-        return <Suspense fallback={fallback}><PosturePointsView onBack={() => setView(AppView.POSTURE)} /></Suspense>;
+        return <Suspense fallback={fallback}><PosturePointsView onBack={() => navigateTo(AppView.POSTURE)} /></Suspense>;
       case AppView.NUTRITION_GUIDE:
-        return <Suspense fallback={fallback}><NutritionGuideView onBack={() => setView(AppView.MEAL)} /></Suspense>;
+        return <Suspense fallback={fallback}><NutritionGuideView activeTab={guidePath} onTabChange={(t) => navigateTo(AppView.NUTRITION_GUIDE, t)} onBack={() => navigateTo(AppView.MEAL)} /></Suspense>;
       case AppView.MOVE_GUIDE:
-        return <Suspense fallback={fallback}><MoveGuideView user={user} todayRecord={todayRecord} records={recordsList} onBack={() => setView(AppView.POSTURE)} /></Suspense>;
+        return <Suspense fallback={fallback}><MoveGuideView user={user} todayRecord={todayRecord} records={recordsList} onBack={() => navigateTo(AppView.POSTURE)} /></Suspense>;
+      case AppView.ARTICLES:
+        return <Suspense fallback={fallback}><ArticlesView onBack={() => navigateTo(AppView.DASHBOARD)} setView={navigateTo} /></Suspense>;
       case AppView.USAGE:
       case AppView.FAQ:
       case AppView.PRIVACY:
       case AppView.TERMS:
       case AppView.INFO:
-        return <Suspense fallback={fallback}><StaticPageView view={view} onBack={() => setView(AppView.SETTINGS)} /></Suspense>;
+      case AppView.OWNER:
+        return <Suspense fallback={fallback}><StaticPageView view={view} onBack={() => navigateTo(AppView.SETTINGS)} setView={navigateTo} /></Suspense>;
       default:
         console.warn(`Unexpected view encountered: ${view}. Redirecting to Dashboard.`);
-        return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={setView} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
+        return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={navigateTo} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
     }
   };
 
-  const showGlobalHeader = ![AppView.USAGE, AppView.FAQ, AppView.PRIVACY, AppView.TERMS, AppView.INFO, AppView.NUTRITION_GUIDE, AppView.MOVE_GUIDE, AppView.POSTURE_POINTS].includes(view);
+  const showGlobalHeader = ![AppView.USAGE, AppView.FAQ, AppView.PRIVACY, AppView.TERMS, AppView.INFO, AppView.OWNER, AppView.NUTRITION_GUIDE, AppView.MOVE_GUIDE, AppView.POSTURE_POINTS, AppView.ARTICLES].includes(view);
   
   const recordsList = React.useMemo(() => Object.values(records), [records]);
 
   const isAnyModalOpen = !!selectedMeal || shareModalOpen || isPostureModalOpen || isCompareModalOpen || !!keypadConfig || !!calendarConfig;
-
-  // 広告表示可否の判定 (WebAdServiceを使用)
-  const shouldShowWebAd = !isNativePlatform() && webAdService.shouldShowAd(view);
 
   // モーダル表示時に背景スクロールを固定
   React.useEffect(() => {
@@ -698,7 +773,7 @@ const App = () => {
                        if (view === AppView.DASHBOARD) {
                          scrollToTop();
                        } else {
-                         setView(AppView.DASHBOARD);
+                         navigateTo(AppView.DASHBOARD);
                        }
                      }}
                    >
@@ -802,11 +877,11 @@ const App = () => {
             <div 
               className="fixed z-[90] flex flex-col items-center gap-4 transition-all duration-300"
               style={{
-                bottom: isMrecVisible 
-                  ? 'calc(env(safe-area-inset-bottom, 20px) + 270px)' 
-                  : isNativePlatform() 
-                    ? 'calc(env(safe-area-inset-bottom, 20px) + 100px)'
-                    : 'calc(env(safe-area-inset-bottom, 20px) + 160px)',
+                bottom: isNativePlatform() 
+                  ? (isMrecVisible 
+                      ? 'calc(env(safe-area-inset-bottom, 20px) + 270px)' 
+                      : 'calc(env(safe-area-inset-bottom, 20px) + 100px)')
+                  : 'calc(env(safe-area-inset-bottom, 20px) + 80px)',
                 right: '20px',
               }}
             >
@@ -834,7 +909,7 @@ const App = () => {
                   if (view === AppView.DASHBOARD) {
                     scrollToTop();
                   } else {
-                    setView(AppView.DASHBOARD);
+                    navigateTo(AppView.DASHBOARD);
                   }
                 }}
                 className="flex items-center justify-center w-[50px] h-[50px] rounded-full shadow-xl active:scale-95 transition-all font-['Courier_New']"
@@ -851,11 +926,11 @@ const App = () => {
             </div>
           )}
 
-          {/* 下固定バナー用スペース確保 */}
-          {(isNativePlatform() || shouldShowWebAd) && <AdBelt />}
+          {/* 下固定バナー用スペース確保 (Nativeのみ) */}
+          {isNativePlatform() && <AdBelt />}
       </div>
 
-      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} currentView={view} setView={setView} />
+      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} currentView={view} setView={navigateTo} />
 
       {/* ... (Modals omitted for brevity, identical to previous) ... */}
       {selectedMeal && (
