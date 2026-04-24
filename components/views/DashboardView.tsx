@@ -167,7 +167,7 @@ const DashboardView: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-32 w-full no-scrollbar relative overflow-x-hidden">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] pb-32 w-full no-scrollbar relative overflow-x-hidden">
       {/* Background Decor */}
       <div
         className="organic-blob w-80 h-80 -top-40 -right-40"

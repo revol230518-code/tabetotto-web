@@ -804,7 +804,7 @@ const MealView: React.FC<MealViewProps> = ({
 
 
   return (
-    <div className="flex flex-col min-h-screen pb-[250px] w-full no-scrollbar overflow-x-hidden relative">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] pb-[250px] w-full no-scrollbar overflow-x-hidden relative">
       {showMealGuide && (
          <div className="fixed inset-0 z-[120] bg-black/40 flex items-center justify-center p-6" onClick={() => {
              setShowMealGuide(false);

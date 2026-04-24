@@ -98,14 +98,24 @@ body {
   color: var(--text-primary);
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS PWA / Safariのスクロールガタつき防止 */
+html, body {
+  height: auto;
+  overscroll-behavior-y: contain;
 }
 
 #root {
   display: flex;
   justify-content: center;
   width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .pt-safe {

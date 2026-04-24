@@ -1,4 +1,3 @@
-
 import { Capacitor } from '@capacitor/core';
 
 type BeforeInstallPromptEvent = Event & {
@@ -6,7 +5,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
-const BUILD_VERSION = 'web-2026-04-23-01';
+const BUILD_VERSION = 'web-2026-04-24-01';
 const SW_URL = `/sw.js?v=${BUILD_VERSION}`;
 const RESET_PARAM = 'resetPwa';
 const RELOAD_FLAG = 'tabetotto-pwa-controller-reloaded';
@@ -87,7 +86,15 @@ const registerServiceWorker = async () => {
     });
 
     console.log('PWA: register success', registration.scope);
-    console.log('PWA: update check start');
+    
+    // すでに待機中があるかチェック
+    if (registration.waiting) {
+        window.dispatchEvent(
+          new CustomEvent('pwa-update-ready', {
+            detail: { version: BUILD_VERSION, registration },
+          })
+        );
+    }
 
     attachInstallingWorkerListener(registration, registration.installing);
 
@@ -151,42 +158,30 @@ export const initPWA = () => {
       window.dispatchEvent(new CustomEvent('pwa-installed'));
     });
 
-// ...既存の処理
-    window.addEventListener('pwa-update-ready', (event: any) => {
-      const alreadyPrompted = sessionStorage.getItem('tabetotto-pwa-update-prompted') === '1';
-      if (alreadyPrompted) return;
-
-      sessionStorage.setItem('tabetotto-pwa-update-prompted', '1');
-      const { registration } = event.detail;
-      const shouldReload = window.confirm('新しい版があります。再読み込みして更新しますか？');
-
-      if (shouldReload) {
-        applyUpdate(registration);
-      }
-    });
-
     // iPhone復帰時のSWチェック
     const checkForUpdate = async () => {
         if ('serviceWorker' in navigator) {
-            const reg = await navigator.serviceWorker.ready;
-            await reg.update();
+            try {
+                const reg = await navigator.serviceWorker.getRegistration();
+                if (reg) await reg.update();
+            } catch (e) {
+                console.warn('PWA: check update failed', e);
+            }
         }
     };
     
-    // pageshow (persisted)、visibilitychange、online
+    // pageshow (persisted)、visibilitychange
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) checkForUpdate();
     });
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-            // デバウンスを考慮して短時間遅延
-            setTimeout(checkForUpdate, 1000);
+            setTimeout(checkForUpdate, 1500);
         }
     });
     window.addEventListener('online', checkForUpdate);
 
     if (document.readyState === 'complete') {
-// ...
       await registerServiceWorker();
     } else {
       window.addEventListener('load', () => {

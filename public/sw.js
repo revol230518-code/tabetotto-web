@@ -1,80 +1,88 @@
-// 次回デプロイ時はこのバージョン文字列を更新してください
-const SW_VERSION = 'web-2026-04-23-01';
+const SW_VERSION = 'web-2026-04-24-01';
 const CACHE_NAME = `tabetotto-cache-${SW_VERSION}`;
 
-// キャッシュ対象の静的アセット
+// キャッシュ対象の静的なベースアセット
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/tabetotto.mascot.svg',
-  '/titleicon.svg',
   '/favicon.png',
   '/apple-touch-icon.png',
+  '/tabetotto.mascot.svg',
+  '/titleicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
 ];
 
 /**
- * Service Worker:
- * 明示的なバージョン管理により、更新を確実にする
+ * Service Worker: 更新とキャッシュ管理の強化版
  */
 
-// 初期インストール
+// 1. インストール: STATIC_ASSETS をキャッシュ
 self.addEventListener('install', (event) => {
   console.log('SW: install', SW_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('SW: プリキャッシュ開始');
+      console.log('SW: プリキャッシュ中...');
       return cache.addAll(STATIC_ASSETS);
     })
   );
-  self.skipWaiting();
+  // インストール後、待機せずにアクティブ化を促すが、
+  // ユーザーの画面遷移を優先するため SKIP_WAITING はメッセージ経由で制御するのが望ましい。
+  // self.skipWaiting(); 
 });
 
-// キャッシュクリーンアップ
+// 2. アクティベート: 古いキャッシュの整理
 self.addEventListener('activate', (event) => {
   console.log('SW: activate', SW_VERSION);
   event.waitUntil(
-    caches.keys().then((allCaches) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        allCaches
-          .filter((name) => name.startsWith('tabetotto-cache-') && name !== CACHE_NAME)
-          .map((name) => {
-            console.log('SW: old cache deleted', name);
-            return caches.delete(name);
-          })
+        keys.map((key) => {
+          // 「tabetotto-cache-」で始まる古いキャッシュのみ削除
+          if (key.startsWith('tabetotto-cache-') && key !== CACHE_NAME) {
+            console.log('SW: 古いキャッシュを削除:', key);
+            return caches.delete(key);
+          }
+        })
       );
+    }).then(() => {
+      // アクティブ化したらすぐに制御を開始
+      return self.clients.claim();
     })
   );
-  self.clients.claim();
 });
 
-// SKIP_WAITING メッセージ対応
-// 統一規格： { type: 'SKIP_WAITING' }
+// 3. メッセージ待ち受け: SKIP_WAITING 指示に対応
 self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('SW: SKIP_WAITINGを受信');
     self.skipWaiting();
   }
 });
 
-// リクエスト処理
+// 4. フェッチ処理
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // GET以外や外部API、CloudRunへのリクエストは無視
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
+  // GETリクエスト以外、または自ドメイン以外、またはAPIリクエスト (/api/ や /v1/ai/) はキャッシュ対象外
+  if (
+    event.request.method !== 'GET' || 
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.includes('/v1/ai/')
+  ) {
     return;
   }
 
-  // Navigation (HTMLページ) リクエスト: Network-First強め
+  // ページ遷移 (HTML) は Network-First (最新を優先)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response.status === 200) {
-            const cacheCopy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           }
           return response;
         })
@@ -85,18 +93,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // それ以外の静的リクエスト: Cache-First
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
+  // ハッシュ付きアセット (/assets/) は Cache-First (ハッシュが変われば別URLになるため)
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((network) => {
+          if (network.ok) {
+            const copy = network.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return network;
+        });
+      })
+    );
+    return;
+  }
 
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const cacheCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+  // その他の静的ファイル (アイコンなど) は Stale-While-Revalidate
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const networkFetch = fetch(event.request).then((network) => {
+        if (network.ok) {
+          const copy = network.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
-        return networkResponse;
-      }).catch(() => {});
+        return network;
+      }).catch(() => null);
+
+      return cached || networkFetch;
     })
   );
 });

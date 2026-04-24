@@ -447,7 +447,7 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack, setView }
   };
 
   return (
-    <div className="flex-1 w-full bg-[#fdfbf7] min-h-screen pb-safe">
+    <div className="flex-1 w-full bg-[#fdfbf7] min-h-screen min-h-[100dvh] pb-safe">
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-4 flex items-center gap-3 border-b shadow-sm border-stone-100">
         <button 
           onClick={onBack}

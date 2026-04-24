@@ -44,6 +44,7 @@ import { motion } from 'motion/react';
 import { triggerHaptic } from './services/haptics';
 import { scrollToTop } from './utils/scrollToTop';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { applyUpdate } from './services/pwaService';
 
 const App = () => {
   const [view, setView] = React.useState<AppView>(AppView.DASHBOARD);
@@ -669,11 +670,28 @@ const App = () => {
     });
   };
 
+  const [pwaUpdateRegistration, setPwaUpdateRegistration] = React.useState<ServiceWorkerRegistration | null>(null);
+
+  React.useEffect(() => {
+    const handlePwaUpdate = (event: any) => {
+      console.log('App: PWA Update detected', event.detail);
+      setPwaUpdateRegistration(event.detail.registration);
+    };
+    window.addEventListener('pwa-update-ready', handlePwaUpdate);
+    return () => window.removeEventListener('pwa-update-ready', handlePwaUpdate);
+  }, []);
+
+  const handleApplyUpdate = () => {
+    if (pwaUpdateRegistration) {
+      applyUpdate(pwaUpdateRegistration);
+    }
+  };
+
   const renderContent = () => {
     if (!isLoaded) return (
-      <div className="flex flex-col items-center justify-center h-screen space-y-4">
-        <div className="w-16 h-16 bg-primary rounded-2xl animate-sway flex items-center justify-center text-white text-2xl font-black">🍱</div>
-        <p className="font-black text-primary animate-pulse">読み込み中...</p>
+      <div className="flex flex-col items-center justify-center h-screen h-[100dvh] space-y-4">
+        <div className="w-16 h-16 bg-primary rounded-2xl animate-sway flex items-center justify-center text-white text-2xl font-black shadow-xl">🍱</div>
+        <p className="font-black text-primary animate-pulse tracking-widest text-sm">読み込み中...</p>
       </div>
     );
 
@@ -721,9 +739,17 @@ const App = () => {
   React.useEffect(() => {
     if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
+    
+    // クリーンアップ
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
   }, [isAnyModalOpen]);
 
   const [showScrollTop, setShowScrollTop] = React.useState(false);
@@ -753,7 +779,7 @@ const App = () => {
 
   return (
     <div 
-        className="min-h-screen font-zen-maru pb-safe selection:text-white overflow-x-hidden relative w-full flex justify-center items-start" 
+        className="min-h-screen min-h-[100dvh] font-zen-maru pb-safe selection:text-white overflow-x-hidden relative w-full flex justify-center items-start" 
         style={{ color: THEME.colors.textPrimary, backgroundColor: THEME.colors.appBg }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -762,7 +788,7 @@ const App = () => {
            style={{ backgroundImage: 'radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
       </div>
 
-      <div className="relative z-10 w-full min-h-screen shadow-xl md:max-w-md bg-transparent flex flex-col overflow-x-hidden">
+      <div className="relative z-10 w-full min-h-screen min-h-[100dvh] shadow-xl md:max-w-md bg-transparent flex flex-col overflow-x-hidden">
           
           {showGlobalHeader && (
              <header className="sticky top-0 z-[100] pt-safe backdrop-blur-md border-b w-full shadow-sm" style={{ backgroundColor: `${THEME.colors.appBg}E6`, borderColor: 'rgba(0,0,0,0.08)' }}>
@@ -860,6 +886,33 @@ const App = () => {
 
           {/* PWAインストール案内 */}
           <PWAInstallPrompt />
+
+          {/* PWAアップデート案内 */}
+          {pwaUpdateRegistration && (
+            <motion.div 
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="fixed bottom-20 left-4 right-4 z-[1001] md:max-w-[400px] md:mx-auto"
+            >
+              <div className="bg-primary text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between border-2 border-white/20 backdrop-blur-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
+                    <ArrowUp size={20} className="text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-black text-sm">最新版があります</p>
+                    <p className="text-[10px] opacity-90 leading-tight">再起動して更新を適用します</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleApplyUpdate}
+                  className="bg-white text-primary px-4 py-2 rounded-xl font-black text-xs active:scale-95 transition-transform shadow-md shrink-0 ml-2"
+                >
+                  更新する
+                </button>
+              </div>
+            </motion.div>
+          )}
           
           {isOnboarding && <OnboardingWrapper 
             onFinished={() => setIsOnboarding(false)} 

@@ -396,7 +396,7 @@ const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack, activeT
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-safe w-full no-scrollbar overflow-x-hidden" style={{ backgroundColor: THEME.colors.appBg }}>
+    <div className="flex flex-col min-h-screen min-h-[100dvh] pb-safe w-full no-scrollbar overflow-x-hidden" style={{ backgroundColor: THEME.colors.appBg }}>
       <PageHeader title={getTitle()} />
       <main className="px-6 pt-6 pb-32">
         <AnimatePresence mode="wait">

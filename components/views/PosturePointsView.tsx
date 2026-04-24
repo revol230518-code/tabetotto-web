@@ -24,7 +24,7 @@ const PosturePointsView: React.FC<PosturePointsViewProps> = ({ onBack }) => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen pb-44 w-full no-scrollbar overflow-x-hidden">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] pb-44 w-full no-scrollbar overflow-x-hidden">
       <header
         className="sticky top-0 z-50 pt-safe backdrop-blur-md border-b-4 w-full shadow-sm"
         style={{

@@ -403,7 +403,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({
   }, [chartData, user.targetWeight]);
 
   return (
-    <div className="flex flex-col min-h-screen pb-72 w-full no-scrollbar overflow-x-hidden relative">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] pb-72 w-full no-scrollbar overflow-x-hidden relative">
       {/* Background Mascot (Watermark) */}
       <div className="absolute bottom-[-5%] -right-12 w-72 h-72 opacity-[0.08] pointer-events-none z-0 rotate-[-15deg]">
         <img src={OFFICIAL_MASCOT_SRC} alt="" className="w-full h-full object-contain grayscale brightness-150" />

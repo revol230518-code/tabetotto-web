@@ -114,7 +114,7 @@ const MoveGuideView: React.FC<MoveGuideViewProps> = ({
   }, [user, todayRecord.weight]);
 
   return (
-    <div className="flex flex-col min-h-screen pb-44 w-full no-scrollbar overflow-x-hidden relative">
+    <div className="flex flex-col min-h-screen min-h-[100dvh] pb-44 w-full no-scrollbar overflow-x-hidden relative">
       {/* Background Decor */}
       <div
         className="organic-blob w-80 h-80 top-20 -right-40 animate-float-slow will-change-transform"
