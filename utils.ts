@@ -203,3 +203,16 @@ export const generateShareImageBlob = async (
 ): Promise<Blob | null> => {
   return renderMealResultToBlob(photoBase64, meal, date);
 };
+
+/**
+ * サービス内ヘルパー：非食品かどうか判定
+ */
+export const isFoodMeal = (meal: MealAnalysis): boolean => {
+  return meal.category === "food" || (meal.isFood !== false && meal.category !== "non_food" && meal.category !== "blocked");
+};
+
+export const getMealCaloriesForTotal = (meal: MealAnalysis): number => {
+  if (!isFoodMeal(meal)) return 0;
+  return typeof meal.numericCalories === "number" ? meal.numericCalories : 0;
+};
+

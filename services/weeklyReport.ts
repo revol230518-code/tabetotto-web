@@ -1,5 +1,6 @@
 
 import { DailyRecord } from "../types";
+import { isFoodMeal, getMealCaloriesForTotal } from "../utils";
 
 export interface WeeklyReport {
   recordDays: number;
@@ -44,9 +45,9 @@ export const generateWeeklyReport = (records: DailyRecord[]): WeeklyReport => {
 
   last7Days.forEach(record => {
     record.mealAnalyses.forEach(meal => {
-      if (meal.isFood !== false) {
+      if (isFoodMeal(meal)) {
         mealCount++;
-        totalCalories += (meal.numericCalories ?? 0);
+        totalCalories += getMealCaloriesForTotal(meal);
         
         if (meal.pfcRatio) {
           totalP += meal.pfcRatio.p;

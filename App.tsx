@@ -10,6 +10,7 @@ import { Modal, Button } from './components/UIComponents';
 import { getOnboardingFlags, setOnboardingFlags } from './services/onboardingService';
 import { OnboardingWrapper } from './components/onboarding/OnboardingWrapper';
 
+const LandingView = lazy(() => import('./components/views/LandingView'));
 const DashboardView = lazy(() => import('./components/views/DashboardView'));
 const MealView = lazy(() => import('./components/views/MealView'));
 const PostureView = lazy(() => import('./components/views/PostureView'));
@@ -47,13 +48,14 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { applyUpdate } from './services/pwaService';
 
 const App = () => {
-  const [view, setView] = React.useState<AppView>(AppView.DASHBOARD);
+  const [view, setView] = React.useState<AppView>(AppView.LANDING);
   const [guidePath, setGuidePath] = React.useState<string>('home');
 
   // URLとViewの同期ロジック
   const getPathFromView = (v: AppView, sub?: string) => {
     switch (v) {
-      case AppView.DASHBOARD: return '/';
+      case AppView.LANDING: return '/';
+      case AppView.DASHBOARD: return '/app';
       case AppView.HISTORY: return '/history';
       case AppView.MEAL: return '/meal';
       case AppView.POSTURE: return '/posture';
@@ -73,7 +75,8 @@ const App = () => {
   };
 
   const getViewFromPath = (path: string): { view: AppView, sub?: string } => {
-    if (path === '/' || path === '') return { view: AppView.DASHBOARD };
+    if (path === '/' || path === '') return { view: AppView.LANDING };
+    if (path === '/app') return { view: AppView.DASHBOARD };
     if (path === '/history') return { view: AppView.HISTORY };
     if (path === '/meal') return { view: AppView.MEAL };
     if (path === '/posture') return { view: AppView.POSTURE };
@@ -89,7 +92,7 @@ const App = () => {
     if (path === '/info') return { view: AppView.INFO };
     if (path === '/owner') return { view: AppView.OWNER };
     if (path === '/posture-points') return { view: AppView.POSTURE_POINTS };
-    return { view: AppView.DASHBOARD };
+    return { view: AppView.LANDING };
   };
 
   const navigateTo = React.useCallback((v: AppView, sub?: string) => {
@@ -116,7 +119,7 @@ const App = () => {
     
     // 初期アクセス時のルーティング
     const initial = getViewFromPath(window.location.pathname);
-    if (initial.view !== AppView.DASHBOARD) {
+    if (initial.view !== AppView.LANDING) {
         setView(initial.view);
         if (initial.sub) setGuidePath(initial.sub);
     }
@@ -698,6 +701,8 @@ const App = () => {
     const fallback = <div className="flex-1 flex items-center justify-center min-h-[50vh]"><Loader2 className="animate-spin text-stone-300" /></div>;
 
     switch (view) {
+      case AppView.LANDING:
+        return <Suspense fallback={fallback}><LandingView onNavigate={navigateTo} /></Suspense>;
       case AppView.DASHBOARD:
         return <Suspense fallback={fallback}><DashboardView user={user} todayRecord={todayRecord} records={records} setView={navigateTo} onWeightUpdate={handleWeightUpdate} openKeypad={openKeypad} /></Suspense>;
       case AppView.MEAL:
@@ -729,7 +734,7 @@ const App = () => {
     }
   };
 
-  const showGlobalHeader = ![AppView.USAGE, AppView.FAQ, AppView.PRIVACY, AppView.TERMS, AppView.INFO, AppView.OWNER, AppView.NUTRITION_GUIDE, AppView.MOVE_GUIDE, AppView.POSTURE_POINTS, AppView.ARTICLES].includes(view);
+  const showGlobalHeader = ![AppView.LANDING, AppView.USAGE, AppView.FAQ, AppView.PRIVACY, AppView.TERMS, AppView.INFO, AppView.OWNER, AppView.NUTRITION_GUIDE, AppView.MOVE_GUIDE, AppView.POSTURE_POINTS, AppView.ARTICLES].includes(view);
   
   const recordsList = React.useMemo(() => Object.values(records), [records]);
 

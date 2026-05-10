@@ -367,6 +367,11 @@ const MealView: React.FC<MealViewProps> = ({
   }, [step, isMenuOpen, isGeneratingResultImage]);
 
   const handleImageProcess = async (base64: string, skipSetup: boolean = false) => {
+    // プレビュー状態をリセット
+    setPreviewBlob(null);
+    setPreviewUrl(null);
+    setIsResultReady(false);
+
     if (!skipSetup) {
       if (!useToken()) {
         setStep("ad_wait");
@@ -527,6 +532,7 @@ const MealView: React.FC<MealViewProps> = ({
           memo: debouncedPreviewData.memo,
           mealType: mealTypeRef.current,
         };
+
         const blob = await renderMealResultToBlob(image, current, recordDate);
         setPreviewBlob(blob);
         setIsResultReady(true);

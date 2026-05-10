@@ -28,6 +28,8 @@ interface NutritionGuideViewProps {
   onTabChange?: (tab: GuideTab) => void;
 }
 
+import { WebAdUnit } from "../AdComponents";
+
 const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack, activeTab, onTabChange }) => {
   const [tab, setTab] = useState<GuideTab>((activeTab as GuideTab) || "home");
 
@@ -137,6 +139,8 @@ const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack, activeT
               <MedicalNotice />
             </div>
 
+            <WebAdUnit />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { id: "protein" as const, title: "タンパク質", icon: Fish, color: PFC_COLORS.p, desc: "からだづくりの材料として知られる栄養素です。" },
@@ -192,7 +196,8 @@ const NutritionGuideView: React.FC<NutritionGuideViewProps> = ({ onBack, activeT
             <p>肉類（牛・豚・鶏など）、魚介類、卵、大豆製品（豆腐・納豆など）、乳製品（チーズ・ヨーグルトなど）に多く含まれています。</p>
             <h3>● たべとっと。での見方</h3>
             <p>アプリ内の解析では、これらの食材の有無や分量を推定してタンパク質の割合を表示しています。厳密な摂取量をグラム単位で気にするよりも、まずはお皿の中に「タンパク源となる食材」が含まれているかどうかをチェックすることから始めてみましょう。</p>
-            <p>毎食完璧にそろえるのは大変です。「朝は忙しかったから、夜で少し補おう」といった、1日や数日単位のゆるやかなバランス感覚を大切にしてください。</p>
+            <p>1日単位での増減に振り回されず、少し長めの流れを見ることが大切です。週単位の変化で、リズムを掴むことをおすすめします。</p>
+            <WebAdUnit />
             <MedicalNotice />
             <NavigationButtons next="fat" />
           </motion.div>

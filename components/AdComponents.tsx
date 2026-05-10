@@ -10,9 +10,33 @@ interface AdProps {
 /**
  * WebAdUnit: 
  * AdSense等のWeb向け広告を表示するコンポーネント。
+ * 手動広告ユニットを配置するためのコンテナを提供します。
  */
-export const WebAdUnit: React.FC<AdProps> = () => {
-    return null;
+export const WebAdUnit: React.FC<AdProps> = ({ className, slot = 'banner' }) => {
+    const isNative = Capacitor.isNativePlatform();
+    if (isNative) return null;
+
+    return (
+        <div className={`flex flex-col items-center justify-center my-8 overflow-hidden bg-stone-50/50 rounded-2xl border border-dashed border-stone-200 min-h-[100px] ${className}`}>
+            <span className="text-[10px] text-stone-300 font-black tracking-widest mb-2 uppercase">Advertisement</span>
+            <div className="w-full flex justify-center">
+                <div 
+                    className="adsbygoogle"
+                    style={{ 
+                        display: 'block', 
+                        textAlign: 'center',
+                        width: '100%',
+                        minWidth: '250px',
+                        minHeight: slot === 'mrec' ? '250px' : '100px'
+                    }}
+                    data-ad-client="ca-pub-3081007845343649"
+                    data-ad-slot={slot === 'mrec' ? '1234567890' : '0987654321'}
+                    data-ad-format="auto"
+                    data-full-width-responsive="true"
+                />
+            </div>
+        </div>
+    );
 };
 
 /**

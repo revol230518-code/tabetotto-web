@@ -2,7 +2,7 @@ import { PenTool, Utensils, Calendar, BookOpen } from "lucide-react";
 import React from "react";
 import { createPortal } from "react-dom";
 import { UserProfile, DailyRecord, AppView } from "../../types";
-import { calculateBMI, calculateCalorieTarget } from "../../utils";
+import { calculateBMI, calculateCalorieTarget, getMealCaloriesForTotal } from "../../utils";
 import { THEME } from "../../theme";
 import { getOnboardingFlags, setOnboardingFlags } from "../../services/onboardingService";
 import { Button } from "../UIComponents";
@@ -115,7 +115,7 @@ const DashboardView: React.FC<DashboardProps> = ({
   // Calculate Calories
   const totalCalories = React.useMemo(() => {
     return todayRecord.mealAnalyses.reduce(
-      (acc, meal) => acc + (meal.numericCalories ?? 0),
+      (acc, meal) => acc + getMealCaloriesForTotal(meal),
       0,
     );
   }, [todayRecord]);

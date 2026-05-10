@@ -7,7 +7,7 @@ const DEFAULT_PROXY_BASE = 'https://tabetotto-ai-proxy-reset-973912868650.asia-n
 const BASE_ORIGIN = ((import.meta as any).env?.VITE_API_BASE_URL ?? DEFAULT_PROXY_BASE).trim().replace(/\/+$/, "");
 export const CLOUD_RUN_CHAT_URL = `${BASE_ORIGIN}/v1/ai/chat`;
 
-const PREFERRED_MODEL = "gemini-2.5-flash-lite";
+const PREFERRED_MODEL = undefined;
 
 /**
  * 堅牢なJSONパース: Markdownタグや余計なテキストを除去して解析

@@ -1,5 +1,6 @@
 
 import { MealAnalysis } from '../../types';
+import { isFoodMeal } from '../../utils';
 import { PFC_COLORS } from '../../utils';
 import { OFFICIAL_MASCOT_SRC } from '../../constants/mascot';
 
@@ -209,7 +210,7 @@ export const renderMealResultToCanvas = async (
     ctx.stroke();
     
     // テキスト
-    const isFood = meal.category === 'food' || (meal.isFood !== false && meal.category !== 'non_food' && meal.category !== 'blocked');
+    const isFood = isFoodMeal(meal);
     const isBlocked = meal.category === 'blocked' || meal.menuName === '解析できません';
     const kcalStr = (isFood && !isBlocked && meal.numericCalories !== undefined) ? String(Math.round(meal.numericCalories)) : '——';
     
@@ -223,8 +224,10 @@ export const renderMealResultToCanvas = async (
     ctx.fillStyle = '#5D5745';
     ctx.font = '900 36px "Zen Maru Gothic"';
     ctx.textAlign = 'left';
-    // 単位('kcal')も数値に合わせて左へ寄せる
-    ctx.fillText('kcal', badgeX + badgeW - 90, badgeY + 85);
+    // 単位('kcal')も数値に合わせて左へ寄せる. 非食品時は表示しない
+    if (isFood && !isBlocked && meal.numericCalories !== undefined) {
+        ctx.fillText('kcal', badgeX + badgeW - 90, badgeY + 85);
+    }
     ctx.restore();
 
     // 8. 品名欄
@@ -268,12 +271,22 @@ export const renderMealResultToCanvas = async (
     
     const commentW = hasRightColumn ? 540 : 936; // 左右幅を最適化
 
-    if (meal.comment && !isBlocked) {
+    const displayComment = meal.comment?.trim() || "";
+    const isFoodForComment = isFoodMeal(meal);
+    const safeComment = 
+        displayComment 
+        || (isBlocked 
+            ? "解析できませんでした。" 
+            : isFoodForComment 
+                ? "おいしそうな一食です。バランスを見ながら記録を続けましょう。" 
+                : "今日はごはんではなく、気になる一枚です。");
+
+    if (safeComment && !isBlocked) {
         ctx.font = 'bold 40px "Zen Maru Gothic"'; // 本文微増(38->40)
         let commentLines: string[] = [];
         let currentCLine = "";
-        for (let i = 0; i < meal.comment.length; i++) {
-            const char = meal.comment[i];
+        for (let i = 0; i < safeComment.length; i++) {
+            const char = safeComment[i];
             const testLine = currentCLine + char;
             if (ctx.measureText(testLine).width > commentW - 48) { // paddingX*2
                 commentLines.push(currentCLine);

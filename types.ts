@@ -87,6 +87,7 @@ export interface DailyRecord {
 }
 
 export enum AppView {
+  LANDING = 'LANDING',
   DASHBOARD = 'DASHBOARD',
   MEAL = 'MEAL',
   HISTORY = 'HISTORY',

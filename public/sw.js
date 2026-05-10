@@ -1,4 +1,4 @@
-const SW_VERSION = 'web-2026-04-24-01';
+const SW_VERSION = 'web-2026-05-09-schema3-comment-01';
 const CACHE_NAME = `tabetotto-cache-${SW_VERSION}`;
 
 // キャッシュ対象の静的なベースアセット

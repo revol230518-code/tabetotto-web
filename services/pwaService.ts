@@ -5,7 +5,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
-const BUILD_VERSION = 'web-2026-04-24-01';
+const BUILD_VERSION = 'web-2026-05-09-schema3-comment-01';
 const SW_URL = `/sw.js?v=${BUILD_VERSION}`;
 const RESET_PARAM = 'resetPwa';
 const RELOAD_FLAG = 'tabetotto-pwa-controller-reloaded';
@@ -37,7 +37,13 @@ const resetPwaIfRequested = async (): Promise<boolean> => {
       const cacheKeys = await caches.keys();
       await Promise.all(
         cacheKeys
-          .filter((key) => key.startsWith('tabetotto-cache-') || key.includes('tabetotto'))
+          .filter((key) => 
+            key.startsWith('tabetotto-cache-') || 
+            key.includes('tabetotto') || 
+            key.includes('vite') || 
+            key.includes('assets') || 
+            key.includes('web')
+          )
           .map((key) => caches.delete(key))
       );
     }
@@ -77,6 +83,17 @@ const attachInstallingWorkerListener = (
 
 const registerServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) return;
+
+  const isPreviewOrDev =
+    location.hostname.includes('aistudio.google.com') ||
+    location.hostname.includes('localhost') ||
+    location.hostname.includes('127.0.0.1') ||
+    location.hostname.includes('run.app'); // AI Studio Preview URL often ends in run.app
+
+  if (isPreviewOrDev) {
+    console.log('PWA: preview/dev環境のためService Worker登録をスキップします');
+    return;
+  }
 
   try {
     console.log('PWA: register start');

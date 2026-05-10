@@ -8,6 +8,8 @@ import { OPERATOR_INFO, RELUCK_URLS } from '../../constants/urls';
 
 import { Capacitor } from '@capacitor/core';
 
+import { WebAdUnit } from '../AdComponents';
+
 interface StaticPageViewProps {
   view: AppView;
   onBack: () => void;
@@ -54,6 +56,9 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack, setView }
               <p className="text-sm text-stone-600 leading-relaxed">
                 {OPERATOR_INFO.APP_NAME}は、{OPERATOR_INFO.OPERATOR_NAME}が運営する、食事や体重をゆるく記録するためのWEBアプリです。<br />
                 日々の食事や体重を見える化し、生活を見直すきっかけづくりを目的としています。
+              </p>
+              <p className="text-sm text-stone-600 leading-relaxed">
+                私たちは、健康管理を「楽しむこと」を第一に考えています。過度な制限や複雑な記録は続きません。写真1枚から始まるゆるい習慣が、長期的な健康の礎になると信じています。
               </p>
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between items-center text-sm border-b border-stone-50 pb-2">
@@ -190,9 +195,14 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack, setView }
               <h3 className="font-black text-rose-500 border-b pb-2">最初にしておきたいこと</h3>
               <p className="text-sm text-stone-600 leading-relaxed">
                 年齢、身長、目標体重、性別、活動量などの基本設定を入れておくと、より見やすいアドバイスが表示されます。<br />
-                ただ数字を並べるのではなく、「今の自分をざっくり振り返る」ためにこれらの情報を活用します。
+                これらの情報はBMIの計算や基礎代謝の推定に使用されます。ただ数字を並べるのではなく、「今の自分をざっくり振り返る」ためにこれらの情報を活用します。
+              </p>
+              <p className="text-sm text-stone-600 leading-relaxed">
+                設定はメニュー内の「設定」からいつでも変更可能です。ライフスタイルの変化に合わせて、柔軟に調整してください。
               </p>
             </section>
+
+            <WebAdUnit />
 
             <section className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100 space-y-4">
               <h3 className="font-black text-stone-700 border-b pb-2">機能と使い方のコツ</h3>
@@ -251,7 +261,11 @@ const StaticPageView: React.FC<StaticPageViewProps> = ({ view, onBack, setView }
                 },
                 { 
                   q: "AI解析の精度について知りたい", 
-                  a: "最新のAIモデルを使用しており高い精度を誇りますが、あくまで「写真から見た推定値」です。お皿の深さや隠れた具材までは正確に測れないため、目安としてご活用ください。" 
+                  a: "最新のAIモデルを使用しており高い精度を誇りますが、あくまで「写真から見た推定値」です。お皿の深さや隠れた具材、調味料の詳細は正確に測れないため、目安としてご活用ください。正確さよりも、日々の食事内容を『意識すること』に価値を置いています。" 
+                },
+                { 
+                  q: "1日の目標カロリーはどうやって決まりますか？", 
+                  a: "設定された年齢、身長、性別、活動量から計算された基礎代謝量に基づいて、目標体重に近づくための推奨範囲を算出しています。厳しい制限ではなく、まずは『この範囲内に収まっているかな？』という確認から始めてみてください。" 
                 },
                 { 
                   q: "Android版との違いはありますか？", 

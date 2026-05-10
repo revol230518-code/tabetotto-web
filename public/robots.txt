@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /app
+Allow: /usage
+Allow: /faq
+Allow: /privacy
+Allow: /terms
+Allow: /owner
+Allow: /articles
+Allow: /guide
+Allow: /move-guide
+Disallow: /api/
+Sitemap: https://tabetotto.web.app/sitemap.xml

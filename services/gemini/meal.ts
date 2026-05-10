@@ -3,6 +3,26 @@ import { MealAnalysis } from "../../types";
 import { callAiProxy, parseJSON } from "./client";
 
 /**
+ * サービス内ヘルパー：非食品かどうか判定
+ */
+export const isFoodMeal = (meal: MealAnalysis): boolean => {
+  return meal.category === "food" || (meal.isFood !== false && meal.category !== "non_food" && meal.category !== "blocked");
+};
+
+/**
+ * ヘルパー: カロリーの数値化と正規化
+ */
+const normalizeKcal = (kcal: any, isFood: boolean): number | undefined => {
+  if (!isFood) return undefined;
+  if (typeof kcal === 'number') return Math.round(kcal);
+  if (typeof kcal === 'string') {
+    const parsed = parseFloat(kcal.replace(/[^0-9.]/g, ''));
+    return isNaN(parsed) ? undefined : Math.round(parsed);
+  }
+  return undefined;
+};
+
+/**
  * たべとっと。 食事解析サービス
  */
 export const analyzeMeal = async (base64Image: string): Promise<MealAnalysis> => {
@@ -82,7 +102,7 @@ JSONのみ出力してください。
   "tagSchemaVersion": 1
 }`;
 
-  const promptText = `この画像を解析してJSONで出力してください。品名は固有名詞もOKの名詞のみ、コメントは品名と切り離した自然な文章（長さは内容に応じて柔軟に、説教なし）でお願いします。JSONのみ出力。`;
+  const promptText = `この画像を解析してJSONで出力してください。"schema": 3 で出力。品名は固有名詞もOKの名詞のみ、コメントは品名と切り離した自然な文章（長さは内容に応じて柔軟に、説教なし）でお願いします。JSONのみ出力。`;
 
   try {
     const res = await callAiProxy({
@@ -90,91 +110,112 @@ JSONのみ出力してください。
       text: promptText,
       systemInstruction: systemInstruction,
       images: [cleanBase64],
-      model: "gemini-2.5-flash-lite",
       wantJson: true
     });
 
     const raw = parseJSON<any>(res.answer);
     
-    if (raw.ok === false || raw.error) {
-      throw new Error(raw.error?.message || "解析エラーが発生しました");
-    }
-    
-    // AIの推定値を数値化 (文字でも数値化を試みる。本当に取れない場合はundefined)
-    let numericCalories: number | undefined = undefined;
-    if (typeof raw.numericCalories === 'number' && !isNaN(raw.numericCalories)) {
-      numericCalories = Math.round(raw.numericCalories);
-    } else if (typeof raw.numericCalories === 'string') {
-      const parsed = parseFloat(raw.numericCalories);
-      if (!isNaN(parsed)) {
-        numericCalories = Math.round(parsed);
+    // スキーマに応じて共通形式 MealAnalysis に変換
+    let normalized: MealAnalysis;
+
+    if (raw.schema === 3) {
+      // 新形式 (schema:3)
+      const isNonFoodCat = raw.cat === 'non_food' || raw.cat === 'blocked';
+      const isFood = raw.isFood && !isNonFoodCat;
+      
+      normalized = {
+        menuName: raw.name || "不明な料理",
+        numericCalories: normalizeKcal(raw.kcal, isFood),
+        comment: (typeof raw.note === "string" && raw.note.trim() ? raw.note.trim() : typeof raw.comment === "string" && raw.comment.trim() ? raw.comment.trim() : typeof raw.advice === "string" && raw.advice.trim() ? raw.advice.trim() : typeof raw.memo === "string" && raw.memo.trim() ? raw.memo.trim() : ""),
+        isFood: isFood,
+        category: isNonFoodCat ? 'non_food' : 'food',
+        pfcRatio: { p: 0, f: 0, c: 0 },
+        foodGroups: raw.fg ? {
+          vegetables: raw.fg.veg, fruits: raw.fg.fruit, mushrooms: raw.fg.mush, seaweed: raw.fg.seaweed,
+          soyBeans: raw.fg.soy, fishSeafood: raw.fg.fish, dairy: raw.fg.dairy, nutsSeeds: raw.fg.nuts, wholeGrains: raw.fg.grain
+        } : undefined,
+        microBalance: raw.micro ? {
+          vitamin: raw.micro.vit, mineral: raw.micro.min, fiber: raw.micro.fiber
+        } : undefined,
+        tagConfidence: raw.conf,
+        tagSchemaVersion: 3
+      };
+    } else {
+      // 旧形式 (既存ロジックを移植)
+      if (raw.ok === false || raw.error) {
+        throw new Error(raw.error?.message || "解析エラーが発生しました");
       }
+      
+      let numericCalories: number | undefined = undefined;
+      if (typeof raw.numericCalories === 'number' && !isNaN(raw.numericCalories)) {
+        numericCalories = Math.round(raw.numericCalories);
+      } else if (typeof raw.numericCalories === 'string') {
+        const parsed = parseFloat(raw.numericCalories);
+        if (!isNaN(parsed)) {
+          numericCalories = Math.round(parsed);
+        }
+      }
+      
+      const nonFoodKeywords = ['イラスト', 'マスコット', '絵', 'キャラクター', 'サンプル', 'ぬいぐるみ', 'おもちゃ', '解析不能'];
+      const isDetectedAsNonFood = nonFoodKeywords.some(keyword => 
+        (raw.menuName && raw.menuName.includes(keyword)) || 
+        (raw.comment && raw.comment.includes(keyword))
+      );
+
+      let isFood = typeof raw.isFood === 'boolean' ? raw.isFood : true;
+
+      if (isDetectedAsNonFood || (numericCalories === 0 && !isFood)) {
+        numericCalories = 0;
+        isFood = false; 
+      }
+
+      const pfcRatio = raw.pfcRatio || { p: 0, f: 0, c: 0 };
+      const isUnanalyzable = raw.menuName === "解析できません";
+      let finalComment = (isUnanalyzable || !isFood) ? (raw.comment || "") : (raw.comment || "今日も美味しくいただきましょう！");
+      finalComment = finalComment.replace(/^(コメント|解説|感想)[:：]\s*/, "").trim();
+
+      let finalMenuName = raw.menuName || "不明な料理";
+      let category = raw.category;
+
+      if (finalMenuName === "非食品" || finalMenuName === "対象外" || category === "blocked") {
+        finalMenuName = "解析できません"; 
+        category = "blocked";
+      }
+
+      if (!category) {
+        if ((numericCalories ?? 0) > 0) category = "food";
+        else if (finalMenuName === "解析できません") category = "blocked";
+        else category = "non_food";
+      }
+
+      normalized = {
+        menuName: finalMenuName,
+        numericCalories: numericCalories,
+        pfcRatio: {
+          p: typeof pfcRatio.p === 'number' ? pfcRatio.p : 0,
+          f: typeof pfcRatio.f === 'number' ? pfcRatio.f : 0,
+          c: typeof pfcRatio.c === 'number' ? pfcRatio.c : 0,
+        },
+        comment: finalComment,
+        isFood: isFood,
+        category: category as 'food' | 'non_food' | 'blocked',
+        mealType: 'lunch',
+        foodGroups: raw.foodGroups,
+        microBalance: raw.microBalance,
+        tagConfidence: raw.tagConfidence,
+        tagSchemaVersion: raw.tagSchemaVersion
+      };
     }
-    
-    // 強制フィルタリング: イラストやマスコットに関するキーワードが含まれる場合は0kcalにする
-    const nonFoodKeywords = ['イラスト', 'マスコット', '絵', 'キャラクター', 'サンプル', 'ぬいぐるみ', 'おもちゃ', '解析不能'];
-    const isDetectedAsNonFood = nonFoodKeywords.some(keyword => 
-      (raw.menuName && raw.menuName.includes(keyword)) || 
-      (raw.comment && raw.comment.includes(keyword))
-    );
 
-    let isFood = typeof raw.isFood === 'boolean' ? raw.isFood : true;
-
-    if (isDetectedAsNonFood || (numericCalories === 0 && !isFood)) {
-      numericCalories = 0;
-      isFood = false; // 強制的に非食品扱いにする
-    }
-
-    const pfcRatio = raw.pfcRatio || { p: 0, f: 0, c: 0 };
-
-    // ハラスメントや解析不能、または非食品時はコメントの扱いを慎重にする
-    const isUnanalyzable = raw.menuName === "解析できません";
-    let finalComment = (isUnanalyzable || !isFood) ? (raw.comment || "") : (raw.comment || "今日も美味しくいただきましょう！");
-
-    // 軽い整形（ラベル除去やトリム）
-    finalComment = finalComment.replace(/^(コメント|解説|感想)[:：]\s*/, "").trim();
-
-    // タイトルが「非食品」などの禁止ワードになっていないか最終チェック
-    let finalMenuName = raw.menuName || "不明な料理";
-    let category = raw.category;
-
-    if (finalMenuName === "非食品" || finalMenuName === "対象外" || category === "blocked") {
-      finalMenuName = "解析できません"; 
-      category = "blocked";
-    }
-
-    if (!category) {
-      if ((numericCalories ?? 0) > 0) category = "food";
-      else if (finalMenuName === "解析できません") category = "blocked";
-      else category = "non_food";
-    }
-
-    return {
-      menuName: finalMenuName,
-      numericCalories: numericCalories,
-      pfcRatio: {
-        p: typeof pfcRatio.p === 'number' ? pfcRatio.p : 0,
-        f: typeof pfcRatio.f === 'number' ? pfcRatio.f : 0,
-        c: typeof pfcRatio.c === 'number' ? pfcRatio.c : 0,
-      },
-      comment: finalComment,
-      isFood: isFood,
-      category: category as 'food' | 'non_food' | 'blocked',
-      mealType: 'lunch',
-      foodGroups: raw.foodGroups,
-      microBalance: raw.microBalance,
-      tagConfidence: raw.tagConfidence,
-      tagSchemaVersion: raw.tagSchemaVersion
-    };
+    return normalized;
   } catch (error: any) {
     console.error("Meal analysis error:", error);
-    // エラー時もアプリが破綻しないよう fallback を返す
     return {
       menuName: "解析失敗",
       numericCalories: undefined,
       pfcRatio: { p: 0, f: 0, c: 0 },
       comment: "うまく見えなかったみたい。明るい場所でもう一度撮ってみてね！",
-      isFood: false, // エラー時は非食品扱い（—表示）にする
+      isFood: false,
       mealType: 'lunch'
     };
   }
